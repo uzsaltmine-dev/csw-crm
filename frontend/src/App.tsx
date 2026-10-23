@@ -67,7 +67,7 @@ export function App() {
         <Route path="/driver" element={<RequireRole roles={["driver"]}><DriverSection><DriverHome /></DriverSection></RequireRole>} />
         <Route path="/driver/requests/:id" element={<RequireRole roles={["driver"]}><DriverSection><ActPage /></DriverSection></RequireRole>} />
         <Route path="/gps" element={<RequireRole roles={["gps"]}><DriverLayout><GpsHome /></DriverLayout></RequireRole>} />
-        <Route path="/admin" element={<RequireRole roles={["admin", "manager"]}><DriverLayout wide><AdminHome /></DriverLayout></RequireRole>} />
+        <Route path="/admin" element={<RequireRole roles={["admin", "manager", "legal"]}><DriverLayout wide><AdminHome /></DriverLayout></RequireRole>} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="*" element={<Home />} />
       </Routes>

@@ -1,5 +1,6 @@
 import { api } from "./client";
-import type { AdminUser, AdminVehicle, CompleteResult, Coords, District, DriverTask, FailReason, FileKind, GpsDriver, Region, Role, Shift, User, Vehicle } from "@/types";
+import type { AdminUser, AdminVehicle, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
+  GpsDriver, ImportBatch, ImportResult, LocationStatus, Region, Role, Shift, User, Vehicle } from "@/types";
 
 export const gpsApi = {
   drivers: () => api.get<GpsDriver[]>("/gps/drivers").then((r) => r.data),
@@ -64,4 +65,25 @@ export const driverApi = {
     api.post<CompleteResult>(`/driver/requests/${id}/complete`, body).then((r) => r.data),
   fail: (id: number, reason: FailReason, note?: string) =>
     api.post<DriverTask>(`/driver/requests/${id}/fail`, { reason, note }).then((r) => r.data),
+};
+
+export type CustomerQuery = { district_id?: number; q?: string; incomplete?: boolean; location?: LocationStatus; limit?: number; offset?: number };
+export type CustomerFields = { name: string; district_id: number; stir?: string | null; director?: string | null; phone?: string | null; address?: string | null; activity_type?: string | null };
+export type ContractCreate = { number: string; type: ContractType; signed_on?: string | null; price?: number | null; valid_from: string; valid_to: string };
+
+export const customersApi = {
+  search: (params: CustomerQuery) => api.get<{ items: CustomerListItem[]; total: number }>("/customers", { params }).then((r) => r.data),
+  get: (id: number) => api.get<CustomerDetail>(`/customers/${id}`).then((r) => r.data),
+  create: (body: CustomerFields) => api.post<CustomerDetail>("/customers", body).then((r) => r.data),
+  update: (id: number, body: Partial<Omit<CustomerFields, "district_id">>) => api.patch<CustomerDetail>(`/customers/${id}`, body).then((r) => r.data),
+  addContact: (id: number, body: { name?: string | null; phone: string }) => api.post<CustomerDetail>(`/customers/${id}/contacts`, body).then((r) => r.data),
+  addContract: (id: number, body: ContractCreate) => api.post<CustomerDetail>(`/customers/${id}/contracts`, body).then((r) => r.data),
+  confirmLocation: (id: number, coords?: { lat: number; lng: number }) =>
+    api.post<CustomerDetail>(`/customers/${id}/location/confirm`, coords ?? {}).then((r) => r.data),
+  importFile: (file: File, dryRun: boolean) => {
+    const fd = new FormData();
+    fd.append("file", file, file.name);
+    return api.post<ImportResult>("/admin/import/customers", fd, { params: { dry_run: dryRun }, timeout: 180_000 }).then((r) => r.data);
+  },
+  batches: () => api.get<ImportBatch[]>("/admin/import/batches").then((r) => r.data),
 };

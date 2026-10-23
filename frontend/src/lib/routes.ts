@@ -7,7 +7,8 @@ export function homePath(user: User): string {
     case "driver": return "/driver";
     case "gps": return "/gps";
     case "admin":
-    case "manager": return "/admin";
+    case "manager":
+    case "legal": return "/admin";
     default: return "/";
   }
 }
