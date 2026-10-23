@@ -1,9 +1,12 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import socketio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1 import auth, driver, gps
 from app.core.config import get_settings
@@ -36,7 +39,24 @@ def create_app(storage=None) -> FastAPI:
     async def health():
         return {"status": "ok"}
 
+    if s.static_dir:
+        _mount_spa(app, Path(s.static_dir))
     return app
+
+
+def _mount_spa(app: FastAPI, root: Path) -> None:
+    """Demo/preview: React build'ini shu server beradi; noma'lum yo'llar index.html ga (client-side routing)."""
+    index = root / "index.html"
+    app.mount("/assets", StaticFiles(directory=root / "assets"), name="assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    async def spa(path: str):
+        if path.startswith("api/"):
+            raise AppError(404, "not_found", "Topilmadi")
+        f = (root / path).resolve()
+        if path and f.is_file() and root.resolve() in f.parents:
+            return FileResponse(f)
+        return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
 
 app = create_app()

@@ -37,6 +37,13 @@ export interface Shift {
   fuel_used: string | null;
 }
 
+export interface GpsDriver {
+  id: number;
+  full_name: string;
+  phone: string | null;
+  shift: Shift | null;
+}
+
 export interface Customer {
   id: number;
   fixed_no: string;

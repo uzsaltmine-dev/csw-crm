@@ -20,6 +20,21 @@ Monorepo:
 - **Jonli yangilanish:** `request:updated`, `driver:location` (Socket.IO).
 - Internet yo'q bo'lsa yuborish bloklanadi (to'liq oflayn rejim — keyingi bosqich).
 
+## Jonli demo (Render, bepul)
+
+`render.yaml` + `Dockerfile.demo`: bitta konteynerda frontend va backend, SQLite, fayllar xotirada.
+Har push'da avtomatik qayta deploy bo'ladi; har qayta ishga tushishda baza boshlang'ich holatga qaytadi.
+
+1. https://render.com → **GitHub bilan kirish** (karta shart emas)
+2. **New → Blueprint** → `uzsaltmine-dev/csw-crm` → **Apply**
+3. Havola: `https://csw-crm-demo.onrender.com` (yoki Render bergan nom)
+
+Demo loginlar (parol `demo1234`): GPS xodimi `gps4`, haydovchi `driver41` (ikkalasi Asaka tumani).
+Tavsiya: GPS xodimini kompyuterda, haydovchini telefon/planshetda oching.
+
+Bepul reja cheklovlari: 15 daqiqa kirilmasa uxlaydi, keyingi ochilish ~1 daqiqa.
+Namuna korxonalar Asakada joylashgan — boshqa joydan yakunlangan ariza haqli ravishda `Shubhali` (radiusdan tashqarida) bo'ladi.
+
 ## Lokal ishga tushirish (Docker)
 
 ```bash

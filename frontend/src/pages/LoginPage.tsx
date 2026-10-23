@@ -15,7 +15,7 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to={user.role === "driver" ? "/driver" : "/"} replace />;
+  if (user) return <Navigate to={user.role === "driver" ? "/driver" : user.role === "gps" ? "/gps" : "/"} replace />;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +32,7 @@ export function LoginPage() {
           <Typography variant="h6">{t("login_title")}</Typography>
           {!online && <Alert severity="warning">{t("offline")}</Alert>}
           {error && <Alert severity="error">{tErr(error)}</Alert>}
+          {import.meta.env.VITE_DEMO === "1" && <Alert severity="info">{t("demo_hint")}</Alert>}
           <TextField id="username" label={t("username")} value={username} onChange={(e) => setUsername(e.target.value)}
             autoComplete="username" autoCapitalize="none" required />
           <TextField id="password" label={t("password")} type="password" value={password} onChange={(e) => setPassword(e.target.value)}

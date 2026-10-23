@@ -26,6 +26,9 @@ REGIONS = {
 }
 
 
+REQUESTS_PER_DISTRICT = 5  # demo: GPS xodimi bir necha marta biriktirib sinashi uchun
+
+
 async def seed() -> None:
     pwd = hash_password(os.getenv("SEED_PASSWORD", "ChangeMe123!"))
     async with SessionLocal() as db:
@@ -60,11 +63,12 @@ async def seed() -> None:
                               type=ContractType.monthly, price=1_200_000, valid_from=date(2026, 1, 1), valid_to=date(2026, 12, 31))
                 db.add(ct)
                 await db.flush()
-                r = Request(customer_id=c.id, contract_id=ct.id, district_id=d.id, waste_type=WasteType.household,
-                            volume_estimate=6, preferred_time="08:00–12:00", note="Namunaviy ariza")
-                db.add(r)
-                await db.flush()
-                r.number = f"AR-{r.id:06d}"
+                for k in range(REQUESTS_PER_DISTRICT):
+                    r = Request(customer_id=c.id, contract_id=ct.id, district_id=d.id, waste_type=WasteType.household,
+                                volume_estimate=6, preferred_time="08:00–12:00", note=f"Namunaviy ariza {k + 1}")
+                    db.add(r)
+                    await db.flush()
+                    r.number = f"AR-{r.id:06d}"
         await db.commit()
         print("Seed tayyor: admin, manager, gps1..gps12, driver11..driver122")
 
