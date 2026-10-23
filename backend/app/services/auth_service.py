@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.errors import AppError
-from app.core.security import verify_password
+from app.core.security import hash_password, verify_password
 from app.db.base import utcnow
 from app.models import User
 from app.repositories import users as users_repo
@@ -28,5 +28,25 @@ async def login(db: AsyncSession, username: str, password: str) -> User:
         raise bad
     user.failed_logins = 0
     user.locked_until = None
+    await db.commit()
+    return user
+
+
+MIN_PASSWORD = 8
+
+
+def check_password_strength(password: str) -> None:
+    if len(password) < MIN_PASSWORD or password.isdigit() or password.isalpha():
+        raise AppError(422, "weak_password", f"Parol kamida {MIN_PASSWORD} belgi bo'lib, harf va raqam aralash bo'lishi kerak")
+
+
+async def change_password(db: AsyncSession, user: User, current: str, new: str) -> User:
+    if not verify_password(current, user.password_hash):
+        raise AppError(422, "wrong_current_password", "Joriy parol noto'g'ri")
+    if current == new:
+        raise AppError(422, "same_password", "Yangi parol eskisidan farq qilishi kerak")
+    check_password_strength(new)
+    user.password_hash = hash_password(new)
+    user.must_change_password = False
     await db.commit()
     return user

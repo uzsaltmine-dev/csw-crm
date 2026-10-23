@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Alert, Box, Button, Paper, Stack, TextField, Typography } from "@mui/material";
 import { Navigate } from "react-router-dom";
 import { useOnline } from "@/hooks/useOnline";
+import { homePath } from "@/lib/routes";
 import { useI18n } from "@/i18n/I18nContext";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { login } from "@/store/authSlice";
@@ -15,7 +16,7 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to={user.role === "driver" ? "/driver" : user.role === "gps" ? "/gps" : "/"} replace />;
+  if (user) return <Navigate to={homePath(user)} replace />;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

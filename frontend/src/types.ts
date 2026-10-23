@@ -12,7 +12,18 @@ export interface User {
   role: Role;
   district_id: number | null;
   language: string;
+  must_change_password: boolean;
 }
+
+export interface AdminUser extends User {
+  is_active: boolean;
+  locked_until: string | null;
+  created_at: string;
+}
+
+export interface Region { id: number; name: string }
+export interface District { id: number; name: string; region_id: number; is_active: boolean }
+export interface AdminVehicle { id: number; plate: string; model: string | null; district_id: number; is_active: boolean }
 
 export interface Vehicle {
   id: number;
