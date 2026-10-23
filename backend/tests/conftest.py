@@ -45,6 +45,7 @@ async def world(sessionmaker):
             "driver2": User(username="driver2", password_hash=pwd, full_name="Haydovchi A2", role=Role.driver, district_id=da.id),
             "driver_b": User(username="driver_b", password_hash=pwd, full_name="Haydovchi B", role=Role.driver, district_id=db_.id),
             "manager": User(username="manager", password_hash=pwd, full_name="Manager", role=Role.manager),
+            "admin": User(username="admin", password_hash=pwd, full_name="Admin", role=Role.admin),
         }
         db.add_all(users.values())
         v1, v2 = Vehicle(plate="60 101 AB", district_id=da.id), Vehicle(plate="60 102 AB", district_id=da.id)

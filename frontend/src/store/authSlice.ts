@@ -24,7 +24,10 @@ export const logout = createAsyncThunk("auth/logout", async () => {
 const slice = createSlice({
   name: "auth",
   initialState,
-  reducers: { sessionExpired: (s) => { s.user = null; s.status = "ready"; } },
+  reducers: {
+    sessionExpired: (s) => { s.user = null; s.status = "ready"; },
+    setUser: (s, a: { payload: User }) => { s.user = a.payload; },
+  },
   extraReducers: (b) => {
     b.addCase(loadMe.pending, (s) => { s.status = "loading"; })
       .addCase(loadMe.fulfilled, (s, a) => { s.user = a.payload; s.status = "ready"; })
@@ -35,5 +38,5 @@ const slice = createSlice({
   },
 });
 
-export const { sessionExpired } = slice.actions;
+export const { sessionExpired, setUser } = slice.actions;
 export default slice.reducer;

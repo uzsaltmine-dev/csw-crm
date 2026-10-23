@@ -5,7 +5,7 @@ import { LANGS, useI18n, type Lang } from "@/i18n/I18nContext";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logout } from "@/store/authSlice";
 
-export function DriverLayout({ children }: { children: ReactNode }) {
+export function DriverLayout({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   const { t, lang, setLang } = useI18n();
   const online = useOnline();
   const user = useAppSelector((s) => s.auth.user);
@@ -24,7 +24,7 @@ export function DriverLayout({ children }: { children: ReactNode }) {
         </Toolbar>
       </AppBar>
       {!online && <Alert severity="warning" square>{t("offline")}</Alert>}
-      <Container maxWidth="md" sx={{ py: 2 }}>{children}</Container>
+      <Container maxWidth={wide ? "lg" : "md"} sx={{ py: 2 }}>{children}</Container>
     </Box>
   );
 }

@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { CompleteResult, Coords, DriverTask, FailReason, FileKind, GpsDriver, Shift, User, Vehicle } from "@/types";
+import type { AdminUser, AdminVehicle, CompleteResult, Coords, District, DriverTask, FailReason, FileKind, GpsDriver, Region, Role, Shift, User, Vehicle } from "@/types";
 
 export const gpsApi = {
   drivers: () => api.get<GpsDriver[]>("/gps/drivers").then((r) => r.data),
@@ -13,6 +13,27 @@ export const authApi = {
   login: (username: string, password: string) => api.post<User>("/auth/login", { username, password }).then((r) => r.data),
   me: () => api.get<User>("/auth/me").then((r) => r.data),
   logout: () => api.post("/auth/logout"),
+  changePassword: (current_password: string, new_password: string) =>
+    api.post<User>("/auth/change-password", { current_password, new_password }).then((r) => r.data),
+};
+
+export type UserCreate = { username: string; full_name: string; phone?: string | null; role: Role; district_id?: number | null; language?: string; password: string };
+export type UserPatch = Partial<Pick<AdminUser, "full_name" | "phone" | "role" | "district_id" | "language" | "is_active">>;
+
+export const adminApi = {
+  users: () => api.get<AdminUser[]>("/admin/users").then((r) => r.data),
+  createUser: (body: UserCreate) => api.post<AdminUser>("/admin/users", body).then((r) => r.data),
+  updateUser: (id: number, body: UserPatch) => api.patch<AdminUser>(`/admin/users/${id}`, body).then((r) => r.data),
+  resetPassword: (id: number, password: string) => api.post<AdminUser>(`/admin/users/${id}/reset-password`, { password }).then((r) => r.data),
+  regions: () => api.get<Region[]>("/admin/regions").then((r) => r.data),
+  districts: () => api.get<District[]>("/admin/districts").then((r) => r.data),
+  createDistrict: (name: string, region_id: number) => api.post<District>("/admin/districts", { name, region_id }).then((r) => r.data),
+  updateDistrict: (id: number, body: Partial<Pick<District, "name" | "is_active">>) => api.patch<District>(`/admin/districts/${id}`, body).then((r) => r.data),
+  vehicles: () => api.get<AdminVehicle[]>("/admin/vehicles").then((r) => r.data),
+  createVehicle: (body: { plate: string; model?: string | null; district_id: number }) => api.post<AdminVehicle>("/admin/vehicles", body).then((r) => r.data),
+  updateVehicle: (id: number, body: Partial<Omit<AdminVehicle, "id">>) => api.patch<AdminVehicle>(`/admin/vehicles/${id}`, body).then((r) => r.data),
+  settings: () => api.get<{ gps_radius_m: number }>("/admin/settings").then((r) => r.data),
+  saveSettings: (gps_radius_m: number) => api.put<{ gps_radius_m: number }>("/admin/settings", { gps_radius_m }).then((r) => r.data),
 };
 
 export const driverApi = {

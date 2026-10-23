@@ -50,6 +50,8 @@ class User(TimestampMixin, Base):
     district_id: Mapped[int | None] = mapped_column(ForeignKey("districts.id"), index=True)
     language: Mapped[str] = mapped_column(String(5), default="uz")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Admin bergan vaqtinchalik paroldan keyin birinchi kirishda almashtirish shart
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime)
     district: Mapped[District | None] = relationship()

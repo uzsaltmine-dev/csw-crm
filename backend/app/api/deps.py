@@ -33,6 +33,9 @@ async def current_user(request: Request, db: AsyncSession = DB) -> User:
     user = await users_repo.by_id(db, int(data["sub"]))
     if not user or not user.is_active:
         raise AppError(401, "not_authenticated", "Tizimga kiring")
+    # Vaqtinchalik parol bilan faqat /auth/* (me, parol almashtirish, chiqish) ishlaydi
+    if user.must_change_password and not request.url.path.startswith("/api/v1/auth/"):
+        raise AppError(403, "password_change_required", "Avval parolni almashtiring")
     return user
 
 

@@ -24,6 +24,96 @@ class UserOut(ORM):
     role: Role
     district_id: int | None
     language: str
+    must_change_password: bool = False
+
+
+class ChangePasswordIn(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=1, max_length=128)
+
+
+# --- admin ---
+USERNAME_PATTERN = r"^[a-z0-9_.]{3,50}$"
+
+
+class AdminUserOut(UserOut):
+    is_active: bool
+    locked_until: datetime | None
+    created_at: datetime
+
+
+class UserCreateIn(BaseModel):
+    username: str = Field(pattern=USERNAME_PATTERN)
+    full_name: str = Field(min_length=2, max_length=150)
+    phone: str | None = Field(default=None, max_length=30)
+    role: Role
+    district_id: int | None = None
+    language: str = Field(default="uz", pattern=r"^(uz|cy|ru|en)$")
+    password: str = Field(min_length=1, max_length=128)  # vaqtinchalik — birinchi kirishda almashtiriladi
+
+
+class UserUpdateIn(BaseModel):
+    full_name: str | None = Field(default=None, min_length=2, max_length=150)
+    phone: str | None = Field(default=None, max_length=30)
+    role: Role | None = None
+    district_id: int | None = None
+    language: str | None = Field(default=None, pattern=r"^(uz|cy|ru|en)$")
+    is_active: bool | None = None
+
+
+class PasswordResetIn(BaseModel):
+    password: str = Field(min_length=1, max_length=128)
+
+
+class RegionOut(ORM):
+    id: int
+    name: str
+
+
+class DistrictOut(ORM):
+    id: int
+    name: str
+    region_id: int
+    is_active: bool
+
+
+class DistrictIn(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    region_id: int
+
+
+class DistrictUpdateIn(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=100)
+    is_active: bool | None = None
+
+
+class AdminVehicleOut(ORM):
+    id: int
+    plate: str
+    model: str | None
+    district_id: int
+    is_active: bool
+
+
+class VehicleIn(BaseModel):
+    plate: str = Field(min_length=4, max_length=20)
+    model: str | None = Field(default=None, max_length=80)
+    district_id: int
+
+
+class VehicleUpdateIn(BaseModel):
+    plate: str | None = Field(default=None, min_length=4, max_length=20)
+    model: str | None = Field(default=None, max_length=80)
+    district_id: int | None = None
+    is_active: bool | None = None
+
+
+class SettingsOut(BaseModel):
+    gps_radius_m: int
+
+
+class SettingsIn(BaseModel):
+    gps_radius_m: int = Field(ge=100, le=300)
 
 
 # --- shifts ---
