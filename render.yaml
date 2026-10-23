@@ -1,9 +1,6 @@
-# Render Blueprint — jonli demo (bepul reja).
-# Ulash: render.com → New → Blueprint → shu repo. Har push'da avtomatik qayta deploy bo'ladi,
-# har bir PR uchun alohida preview havola ochiladi.
-previews:
-  generation: automatic
-  expireAfterDays: 7
+# Render Blueprint — jonli demo (bepul Hobby reja).
+# Ulash: render.com → New → Blueprint → shu repo. Har push'da avtomatik qayta deploy bo'ladi.
+# PR preview muhitlari Hobby rejada yo'q (Render: "Preview Environments are not available for Hobby workspaces").
 
 services:
   - type: web
