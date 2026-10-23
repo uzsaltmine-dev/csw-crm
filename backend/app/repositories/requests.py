@@ -1,0 +1,44 @@
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.models import ActFile, Customer, Request
+from app.models.enums import ACTIVE_REQUEST_STATUSES, FileKind, RequestStatus
+
+
+def _with_details(q):
+    return q.options(
+        selectinload(Request.customer).selectinload(Customer.district),
+        selectinload(Request.contract),
+        selectinload(Request.shift),
+    )
+
+
+async def by_id(db: AsyncSession, request_id: int, lock: bool = False) -> Request | None:
+    q = _with_details(select(Request).where(Request.id == request_id))
+    if lock:
+        q = q.with_for_update()
+    return (await db.execute(q)).scalar_one_or_none()
+
+
+async def active_for_driver(db: AsyncSession, driver_id: int) -> list[Request]:
+    q = _with_details(select(Request).where(Request.driver_id == driver_id, Request.status.in_(ACTIVE_REQUEST_STATUSES))
+                      .order_by(Request.created_at))
+    return list((await db.execute(q)).scalars())
+
+
+async def new_in_district(db: AsyncSession, district_id: int | None) -> list[Request]:
+    q = select(Request).where(Request.status == RequestStatus.new)
+    if district_id:
+        q = q.where(Request.district_id == district_id)
+    return list((await db.execute(_with_details(q.order_by(Request.created_at)))).scalars())
+
+
+async def count_active_on_shift(db: AsyncSession, shift_id: int) -> int:
+    q = select(func.count()).select_from(Request).where(Request.shift_id == shift_id, Request.status.in_(ACTIVE_REQUEST_STATUSES))
+    return (await db.execute(q)).scalar_one()
+
+
+async def files_for(db: AsyncSession, request_id: int) -> dict[FileKind, ActFile]:
+    rows = (await db.execute(select(ActFile).where(ActFile.request_id == request_id))).scalars()
+    return {f.kind: f for f in rows}
