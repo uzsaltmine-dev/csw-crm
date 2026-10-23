@@ -1,3 +1,4 @@
+import os
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -23,6 +24,7 @@ class Settings(BaseSettings):
     login_max_attempts: int = 5
     login_lock_minutes: int = 15
 
+    static_dir: str | None = None  # demo: frontend build'i shu papkadan beriladi (bitta konteyner)
     storage_backend: str = "minio"  # "memory" — MinIO'siz lokal ishlab chiqish uchun (fayllar xotirada)
     minio_endpoint: str = "localhost:9000"
     minio_access_key: str = "minio"
@@ -32,7 +34,11 @@ class Settings(BaseSettings):
 
     @property
     def cors_list(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        origins = [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        # Render har bir servis (va PR preview) uchun o'z URL'ini beradi — Socket.IO Origin tekshiruvi uchun
+        if os.getenv("RENDER_EXTERNAL_URL"):
+            origins.append(os.environ["RENDER_EXTERNAL_URL"].rstrip("/"))
+        return origins
 
 
 @lru_cache

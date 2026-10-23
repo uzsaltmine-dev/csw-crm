@@ -1,5 +1,13 @@
 import { api } from "./client";
-import type { CompleteResult, Coords, DriverTask, FailReason, FileKind, Shift, User } from "@/types";
+import type { CompleteResult, Coords, DriverTask, FailReason, FileKind, GpsDriver, Shift, User, Vehicle } from "@/types";
+
+export const gpsApi = {
+  drivers: () => api.get<GpsDriver[]>("/gps/drivers").then((r) => r.data),
+  freeVehicles: () => api.get<Vehicle[]>("/gps/vehicles", { params: { free: true } }).then((r) => r.data),
+  openShift: (driver_id: number, vehicle_id: number) => api.post<Shift>("/gps/shifts", { driver_id, vehicle_id }).then((r) => r.data),
+  newRequests: () => api.get<DriverTask[]>("/gps/requests").then((r) => r.data),
+  assign: (requestId: number, driver_id: number) => api.post<DriverTask>(`/gps/requests/${requestId}/assign`, { driver_id }).then((r) => r.data),
+};
 
 export const authApi = {
   login: (username: string, password: string) => api.post<User>("/auth/login", { username, password }).then((r) => r.data),

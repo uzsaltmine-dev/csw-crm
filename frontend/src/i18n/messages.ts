@@ -82,6 +82,27 @@ export const MESSAGES = {
   s_enroute: ["Yo'lda", "В пути", "En route"],
   s_onsite: ["Joyida", "На месте", "On site"],
 
+  // GPS xodimi
+  gps_title: ["GPS xodimi", "Сотрудник GPS", "GPS dispatcher"],
+  gps_drivers: ["Haydovchilar va smenalar", "Водители и смены", "Drivers and shifts"],
+  gps_requests: ["Biriktirilmagan arizalar", "Неназначенные заявки", "Unassigned requests"],
+  no_shift: ["Smena yo'q", "Нет смены", "No shift"],
+  shift_opened: ["Ochildi, haydovchi boshlamagan", "Открыта, водитель не начал", "Opened, not started"],
+  shift_active: ["Ishda", "На смене", "On shift"],
+  pick_vehicle: ["Mashinani tanlang", "Выберите машину", "Choose a vehicle"],
+  open_shift: ["Smena ochish", "Открыть смену", "Open shift"],
+  shift_opened_ok: ["Smena ochildi", "Смена открыта", "Shift opened"],
+  pick_driver: ["Haydovchi", "Водитель", "Driver"],
+  assign: ["Biriktirish", "Назначить", "Assign"],
+  assigned_ok: ["Biriktirildi, avtonaryad: {n}", "Назначено, путевой лист: {n}", "Assigned, work order: {n}"],
+  no_free_vehicles: ["Bo'sh mashina yo'q", "Нет свободных машин", "No free vehicles"],
+  no_active_drivers: ["Smenadagi haydovchi yo'q — avval smena oching va haydovchi uni boshlasin",
+    "Нет водителей на смене — откройте смену, водитель должен её начать",
+    "No drivers on shift — open a shift and let the driver start it"],
+  no_new_requests: ["Yangi ariza yo'q", "Новых заявок нет", "No new requests"],
+  created: ["Yaratildi", "Создана", "Created"],
+  demo_hint: ["Demo: haydovchi — driver41, GPS xodimi — gps4 (Asaka tumani). Parol: demo1234", "Демо: водитель — driver41, GPS — gps4 (Асака). Пароль: demo1234", "Demo: driver — driver41, GPS dispatcher — gps4 (Asaka). Password: demo1234"],
+
   // backend xato kodlari
   err_network: ["Server bilan aloqa yo'q", "Нет связи с сервером", "Cannot reach the server"],
   err_invalid_credentials: ["Login yoki parol noto'g'ri", "Неверный логин или пароль", "Wrong username or password"],
@@ -93,7 +114,12 @@ export const MESSAGES = {
   err_gps_required: ["GPS joylashuv kerak", "Нужна геолокация", "GPS location required"],
   err_act_incomplete: ["Dalolatnoma to'liq emas", "Акт заполнен не полностью", "The act is incomplete"],
   err_file_too_large: ["Rasm hajmi juda katta", "Слишком большой файл", "The image is too large"],
-  err_unknown: ["Kutilmagan xato", "Непредвиденная ошибка", "Unexpected error"],
+  err_vehicle_busy: ["Bu mashina boshqa ochiq smenada", "Машина занята в другой смене", "This vehicle is on another open shift"],
+  err_driver_has_open_shift: ["Haydovchida ochiq smena bor", "У водителя уже есть смена", "The driver already has an open shift"],
+  err_driver_no_active_shift: ["Haydovchi smenani hali boshlamagan", "Водитель ещё не начал смену", "The driver has not started the shift yet"],
+  err_district_mismatch: ["Haydovchi va ariza bir tumanda emas", "Водитель и заявка в разных районах", "Driver and request are in different districts"],
+  err_request_not_new: ["Ariza allaqachon biriktirilgan", "Заявка уже назначена", "The request is already assigned"],
+  err_unknown:["Kutilmagan xato", "Непредвиденная ошибка", "Unexpected error"],
 } as const satisfies Record<string, readonly [string, string, string]>;
 
 export type MessageKey = keyof typeof MESSAGES;

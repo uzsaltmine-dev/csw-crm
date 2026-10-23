@@ -1,0 +1,20 @@
+# Render Blueprint — jonli demo (bepul reja).
+# Ulash: render.com → New → Blueprint → shu repo. Har push'da avtomatik qayta deploy bo'ladi,
+# har bir PR uchun alohida preview havola ochiladi.
+previews:
+  generation: automatic
+  expireAfterDays: 7
+
+services:
+  - type: web
+    name: csw-crm-demo
+    runtime: docker
+    plan: free
+    region: frankfurt        # Toshkentga eng yaqin
+    dockerfilePath: ./Dockerfile.demo
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true

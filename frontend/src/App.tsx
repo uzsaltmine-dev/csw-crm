@@ -7,6 +7,7 @@ import { closeSocket, getSocket } from "@/lib/socket";
 import { LoginPage } from "@/pages/LoginPage";
 import { ActPage } from "@/pages/driver/ActPage";
 import { DriverHome } from "@/pages/driver/DriverHome";
+import { GpsHome } from "@/pages/gps/GpsHome";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { loadMe, sessionExpired } from "@/store/authSlice";
 import { refreshDriver } from "@/store/driverSlice";
@@ -40,6 +41,7 @@ function Home() {
   if (status !== "ready") return null;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role === "driver") return <Navigate to="/driver" replace />;
+  if (user.role === "gps") return <Navigate to="/gps" replace />;
   return <Alert severity="info" sx={{ m: 2 }}>Bu rol uchun panel keyingi bosqichda qo'shiladi ({user.role}).</Alert>;
 }
 
@@ -60,6 +62,7 @@ export function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/driver" element={<RequireRole role="driver"><DriverSection><DriverHome /></DriverSection></RequireRole>} />
         <Route path="/driver/requests/:id" element={<RequireRole role="driver"><DriverSection><ActPage /></DriverSection></RequireRole>} />
+        <Route path="/gps" element={<RequireRole role="gps"><DriverLayout><GpsHome /></DriverLayout></RequireRole>} />
         <Route path="*" element={<Home />} />
       </Routes>
     </BrowserRouter>
