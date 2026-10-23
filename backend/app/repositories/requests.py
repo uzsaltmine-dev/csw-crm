@@ -9,6 +9,7 @@ from app.models.enums import ACTIVE_REQUEST_STATUSES, FileKind, RequestStatus
 def _with_details(q):
     return q.options(
         selectinload(Request.customer).selectinload(Customer.district),
+        selectinload(Request.customer).selectinload(Customer.contracts),
         selectinload(Request.contract),
         selectinload(Request.shift),
     )

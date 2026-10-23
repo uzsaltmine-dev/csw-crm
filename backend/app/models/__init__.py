@@ -5,7 +5,7 @@ from sqlalchemy import Boolean, Date, DateTime, Enum as SAEnum, Float, ForeignKe
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, utcnow
-from app.models.enums import ContractType, FailReason, FileKind, RequestStatus, Role, ShiftStatus, WasteType
+from app.models.enums import ContractType, FailReason, FileKind, LocationStatus, RequestStatus, Role, ShiftStatus, WasteType
 
 
 def enum_col(enum_cls):
@@ -91,17 +91,57 @@ class Shift(TimestampMixin, Base):
 
 class Customer(TimestampMixin, Base):
     __tablename__ = "customers"
+    __table_args__ = (UniqueConstraint("district_id", "name_key", name="uq_customers_district_name"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     fixed_no: Mapped[str] = mapped_column(String(20), unique=True)  # doimiy raqam, masalan A-0101
-    stir: Mapped[str] = mapped_column(String(9), unique=True)
+    # STIR Excel'da yo'q — keyin yuridik bo'lim to'ldiradi; kiritilsa takrorlanmaydi
+    stir: Mapped[str | None] = mapped_column(String(9), unique=True)
     name: Mapped[str] = mapped_column(String(200))
+    name_key: Mapped[str] = mapped_column(String(200))  # birlashtirish uchun normallashtirilgan nom
+    activity_type: Mapped[str | None] = mapped_column(String(100))
     director: Mapped[str | None] = mapped_column(String(150))
     phone: Mapped[str | None] = mapped_column(String(30))
     district_id: Mapped[int] = mapped_column(ForeignKey("districts.id"), index=True)
     address: Mapped[str | None] = mapped_column(String(255))
-    lat: Mapped[float] = mapped_column(Float)
-    lng: Mapped[float] = mapped_column(Float)
+    lat: Mapped[float | None] = mapped_column(Float)
+    lng: Mapped[float | None] = mapped_column(Float)
+    location_status: Mapped[LocationStatus] = mapped_column(enum_col(LocationStatus), default=LocationStatus.none, server_default="none")
+    source: Mapped[str] = mapped_column(String(10), default="manual", server_default="manual")
+    import_batch_id: Mapped[int | None] = mapped_column(ForeignKey("import_batches.id"))
     district: Mapped[District] = relationship()
+    contacts: Mapped[list["CustomerContact"]] = relationship(order_by="CustomerContact.id", cascade="all, delete-orphan")
+    contracts: Mapped[list["Contract"]] = relationship(order_by="Contract.id", viewonly=True)
+
+    def active_contract(self, today: date | None = None) -> "Contract | None":
+        """Bugun amal qiladigan shartnoma (contracts oldindan yuklangan bo'lishi kerak)."""
+        today = today or date.today()
+        return next((c for c in reversed(self.contracts) if c.is_active and c.valid_from <= today <= c.valid_to), None)
+
+    @property
+    def missing_fields(self) -> list[str]:
+        """Haydovchi biriktirish uchun yetishmayotgan ma'lumotlar: 'stir', 'contract'."""
+        return [f for f, ok in (("stir", bool(self.stir)), ("contract", self.active_contract() is not None)) if not ok]
+
+
+class CustomerContact(TimestampMixin, Base):
+    __tablename__ = "customer_contacts"
+    __table_args__ = (UniqueConstraint("customer_id", "phone", name="uq_customer_contacts_phone"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), index=True)
+    name: Mapped[str | None] = mapped_column(String(150))
+    phone: Mapped[str] = mapped_column(String(30))
+
+
+class ImportBatch(TimestampMixin, Base):
+    __tablename__ = "import_batches"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    file_name: Mapped[str] = mapped_column(String(255))
+    uploaded_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    rows_total: Mapped[int] = mapped_column(Integer, default=0)
+    customers_created: Mapped[int] = mapped_column(Integer, default=0)
+    customers_merged: Mapped[int] = mapped_column(Integer, default=0)
+    rows_skipped: Mapped[int] = mapped_column(Integer, default=0)
+    report: Mapped[str | None] = mapped_column(Text)  # JSON: xatolar ro'yxati
 
 
 class Contract(TimestampMixin, Base):
@@ -160,9 +200,9 @@ class Act(Base):
     note: Mapped[str] = mapped_column(Text)
     lat: Mapped[float] = mapped_column(Float)
     lng: Mapped[float] = mapped_column(Float)
-    distance_m: Mapped[int] = mapped_column(Integer)
+    distance_m: Mapped[int | None] = mapped_column(Integer)
     radius_m: Mapped[int] = mapped_column(Integer)
-    in_radius: Mapped[bool] = mapped_column(Boolean)
+    in_radius: Mapped[bool | None] = mapped_column(Boolean)  # None — koordinatasiz korxona, radius tekshirilmadi
     vehicle_plate: Mapped[str] = mapped_column(String(20))
     completed_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
@@ -197,6 +237,6 @@ class AppSetting(Base):
 
 
 __all__ = [
-    "Base", "Region", "Provider", "District", "User", "Vehicle", "Shift", "Customer", "Contract",
+    "Base", "Region", "Provider", "District", "User", "Vehicle", "Shift", "Customer", "CustomerContact", "ImportBatch", "Contract",
     "Request", "NaryadCounter", "Act", "ActFile", "RequestEvent", "AppSetting",
 ]

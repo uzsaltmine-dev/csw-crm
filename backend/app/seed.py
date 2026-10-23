@@ -5,14 +5,14 @@ Parol SEED_PASSWORD muhit o'zgaruvchisidan olinadi (bo'lmasa: ChangeMe123!). Qay
 """
 import asyncio
 import os
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import select
 
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models import AppSetting, Contract, Customer, District, Provider, Region, Request, User, Vehicle
-from app.models.enums import ContractType, Role, WasteType
+from app.models.enums import ContractType, LocationStatus, Role, WasteType
 
 REGIONS = {
     "Andijon viloyati": ("Bio Tex Eko", "BTE", "60", [
@@ -38,6 +38,7 @@ async def seed() -> None:
         db.add(AppSetting(key="gps_radius_m", value="300"))
         db.add(User(username="admin", password_hash=pwd, full_name="Administrator", role=Role.admin))
         db.add(User(username="manager", password_hash=pwd, full_name="Manager", role=Role.manager))
+        db.add(User(username="legal", password_hash=pwd, full_name="Yuridik bo'lim xodimi", role=Role.legal))
         n = 0
         for region_name, (prov_name, code, plate_code, districts) in REGIONS.items():
             region = Region(name=region_name)
@@ -55,12 +56,13 @@ async def seed() -> None:
                     db.add(User(username=f"driver{n}{k}", password_hash=pwd, full_name=f"Haydovchi {n}-{k}",
                                 phone=f"+998 90 000-{n:02d}-{k:02d}", role=Role.driver, district_id=d.id))
                 c = Customer(fixed_no=f"A-{100 + n:04d}", stir=f"{300000000 + n * 1111:09d}", name=f"\"Namuna {n}\" MChJ",
+                             name_key=f"namuna {n} mchj", location_status=LocationStatus.confirmed, activity_type="Savdo",
                              director="Namuna rahbar", phone="+998 91 111-11-11", district_id=d.id,
                              address="Mustaqillik ko'chasi, 1-uy", lat=lat + 0.002, lng=lng + 0.002)
                 db.add(c)
                 await db.flush()
                 ct = Contract(customer_id=c.id, number=f"SH-2026/{n:04d}", signed_on=date(2026, 1, 15),
-                              type=ContractType.monthly, price=1_200_000, valid_from=date(2026, 1, 1), valid_to=date(2026, 12, 31))
+                              type=ContractType.monthly, price=1_200_000, valid_from=date.today() - timedelta(days=30), valid_to=date.today() + timedelta(days=365))
                 db.add(ct)
                 await db.flush()
                 for k in range(REQUESTS_PER_DISTRICT):
@@ -69,8 +71,20 @@ async def seed() -> None:
                     db.add(r)
                     await db.flush()
                     r.number = f"AR-{r.id:06d}"
+                # Kartasi to'liq bo'lmagan korxona (STIR, shartnoma, koordinata yo'q) — assenizator arizasi biriktirilmaydi,
+                # yurist STIR va shartnoma kiritgach biriktiriladi; birinchi tashrifdan keyin Manager koordinatani tasdiqlaydi
+                c2 = Customer(fixed_no=f"A-{200 + n:04d}", name=f"\"Yangi mijoz {n}\" MChJ", name_key=f"yangi mijoz {n} mchj",
+                              location_status=LocationStatus.none, activity_type="Umumiy ovqatlanish", phone="+998 93 222-22-22",
+                              district_id=d.id, address="Navoiy ko'chasi, 5-uy", source="excel")
+                db.add(c2)
+                await db.flush()
+                r = Request(customer_id=c2.id, district_id=d.id, waste_type=WasteType.septic, volume_estimate=4,
+                            note="Assenizator: hojatxona chuquri to'lgan")
+                db.add(r)
+                await db.flush()
+                r.number = f"AR-{r.id:06d}"
         await db.commit()
-        print("Seed tayyor: admin, manager, gps1..gps12, driver11..driver122")
+        print("Seed tayyor: admin, manager, legal, gps1..gps12, driver11..driver122")
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.v1 import admin, auth, driver, gps
+from app.api.v1 import admin, auth, customers, driver, gps
 from app.core.config import get_settings
 from app.core.errors import AppError, app_error_handler
 from app.middleware import CsrfHeaderMiddleware, RequestContextMiddleware
@@ -32,7 +32,7 @@ def create_app(storage=None) -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(CORSMiddleware, allow_origins=s.cors_list, allow_credentials=True,
                        allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Request-ID"])
-    for r in (auth.router, driver.router, gps.router, admin.router):
+    for r in (auth.router, driver.router, gps.router, admin.router, customers.router):
         app.include_router(r, prefix="/api/v1")
 
     @app.get("/api/health", tags=["system"])

@@ -2,7 +2,7 @@ import os
 
 os.environ.setdefault("JWT_SECRET", "test-secret")
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -12,7 +12,7 @@ from app.core.security import hash_password
 from app.db.session import get_session
 from app.main import create_app
 from app.models import Base, Contract, Customer, District, Provider, Region, Request, User, Vehicle
-from app.models.enums import ContractType, Role
+from app.models.enums import ContractType, LocationStatus, Role
 from app.services.storage import MemoryStorage
 
 PASSWORD = "Secret123!"
@@ -46,15 +46,17 @@ async def world(sessionmaker):
             "driver_b": User(username="driver_b", password_hash=pwd, full_name="Haydovchi B", role=Role.driver, district_id=db_.id),
             "manager": User(username="manager", password_hash=pwd, full_name="Manager", role=Role.manager),
             "admin": User(username="admin", password_hash=pwd, full_name="Admin", role=Role.admin),
+            "legal": User(username="legal", password_hash=pwd, full_name="Yurist", role=Role.legal),
         }
         db.add_all(users.values())
         v1, v2 = Vehicle(plate="60 101 AB", district_id=da.id), Vehicle(plate="60 102 AB", district_id=da.id)
         vb = Vehicle(plate="75 201 BA", district_id=db_.id)
         db.add_all([v1, v2, vb]); await db.flush()
-        cust = Customer(fixed_no="A-0101", stir="305123456", name="\"Asaka Avto\" MChJ", district_id=da.id, lat=40.6415, lng=72.2390)
+        cust = Customer(fixed_no="A-0101", stir="305123456", name="\"Asaka Avto\" MChJ", name_key="asaka avto mchj",
+                        district_id=da.id, lat=40.6415, lng=72.2390, location_status=LocationStatus.confirmed)
         db.add(cust); await db.flush()
         ct = Contract(customer_id=cust.id, number="SH-2026/0001", type=ContractType.monthly,
-                      valid_from=date(2026, 1, 1), valid_to=date(2026, 12, 31))
+                      valid_from=date.today() - timedelta(days=30), valid_to=date.today() + timedelta(days=365))
         db.add(ct); await db.flush()
         reqs = []
         for i in range(3):

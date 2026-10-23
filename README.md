@@ -20,6 +20,18 @@ Monorepo:
 - **Jonli yangilanish:** `request:updated`, `driver:location` (Socket.IO).
 - Internet yo'q bo'lsa yuborish bloklanadi (to'liq oflayn rejim — keyingi bosqich).
 
+## 2-bosqich: korxonalar bazasi va Excel import
+
+- **Korxonalar** (`/admin#customers`): qidiruv (nom kirill/lotin, STIR, telefon), filtrlar, karta, aloqa raqamlari, shartnomalar.
+  Ko'rish — admin, manager, yurist, GPS (o'z tumani); tahrirlash va shartnoma — admin, yurist; koordinata tasdig'i — admin, manager.
+- **Excel import** (faqat admin): call-center jadvali (.xlsx). Avval tahlil (bazaga yozilmaydi), keyin import. Viloyat/tuman yozuvlari
+  normallashtiriladi, bir korxonaning takror qatorlari birlashadi, barcha telefonlar saqlanadi; qayta import xavfsiz.
+  Buyurtmalar tarixi import qilinmaydi. Namuna (sun'iy ma'lumot): `docs/samples/call-center-namuna.xlsx`.
+- **Biriktirish sharti:** korxonada STIR va amaldagi shartnoma bo'lmasa haydovchi biriktirilmaydi (`customer_incomplete`).
+- **Koordinata:** importdagi korxonada yo'q → birinchi tashrifda haydovchi dalolatnoma yopgan nuqta olinadi (radius tekshirilmaydi) →
+  Manager tasdiqlaydi → keyingi tashriflar shu nuqta bo'yicha tekshiriladi.
+- Yangi xizmat turi: **assenizator** (`septic`).
+
 ## Jonli demo (Render, bepul)
 
 `render.yaml` + `Dockerfile.demo`: bitta konteynerda frontend va backend, SQLite, fayllar xotirada.
@@ -29,7 +41,7 @@ Har push'da avtomatik qayta deploy bo'ladi; har qayta ishga tushishda baza boshl
 2. **New → Blueprint** → `uzsaltmine-dev/csw-crm` → **Apply**
 3. Havola: `https://csw-crm-demo.onrender.com` (yoki Render bergan nom)
 
-Demo loginlar (parol `demo1234`): GPS xodimi `gps4`, haydovchi `driver41` (ikkalasi Asaka tumani).
+Demo loginlar (parol `demo1234`): GPS xodimi `gps4`, haydovchi `driver41` (ikkalasi Asaka tumani), `admin`, `manager`, yurist `legal`.
 Tavsiya: GPS xodimini kompyuterda, haydovchini telefon/planshetda oching.
 
 Bepul reja cheklovlari: 15 daqiqa kirilmasa uxlaydi, keyingi ochilish ~1 daqiqa.

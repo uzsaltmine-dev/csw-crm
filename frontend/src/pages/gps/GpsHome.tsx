@@ -86,12 +86,17 @@ export function GpsHome() {
               <Stack sx={{ flex: 1, minWidth: 0 }}>
                 <Typography fontWeight={600}>{r.number} · {r.customer.name}</Typography>
                 <Typography variant="body2" color="text.secondary">{r.customer.address} · {t("created")}: {formatDateTime(new Date(r.created_at + "Z"))}</Typography>
+                {(r.waste_type === "septic" || r.customer.missing_fields.length > 0) && <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: "wrap" }}>
+                  {r.waste_type === "septic" && <Chip size="small" color="info" label={t("w_septic")} />}
+                  {r.customer.missing_fields.map((m) => <Chip key={m} size="small" color="error" variant="outlined" label={t(m === "stir" ? "missing_stir" : "missing_contract")} />)}
+                </Stack>}
+                {r.customer.missing_fields.length > 0 && <Typography variant="caption" color="error">{t("cannot_assign_hint")}</Typography>}
               </Stack>
               <Select size="small" displayEmpty value={pickDriver[r.id] ?? ""} onChange={(e) => setPickDriver({ ...pickDriver, [r.id]: Number(e.target.value) })} sx={{ minWidth: 180 }} disabled={!active.length}>
                 <MenuItem value="" disabled>{t("pick_driver")}</MenuItem>
                 {active.map((d) => <MenuItem key={d.id} value={d.id}>{d.full_name} · {d.shift!.vehicle.plate}</MenuItem>)}
               </Select>
-              <Button variant="contained" disabled={busy || !online || !pickDriver[r.id]}
+              <Button variant="contained" disabled={busy || !online || !pickDriver[r.id] || r.customer.missing_fields.length > 0}
                 onClick={() => run(async () => { const res = await gpsApi.assign(r.id, pickDriver[r.id]); return t("assigned_ok", { n: res.naryad_no ?? "" }); })}>{t("assign")}</Button>
             </Stack>
           ))}

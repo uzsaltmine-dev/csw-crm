@@ -10,7 +10,13 @@ from app import realtime
 from app.core.errors import conflict, invalid, not_found
 from app.db.base import utcnow
 from app.models import Act, ActFile, Request, Shift, User
-from app.models.enums import FailReason, FileKind, RequestStatus, ShiftStatus
+from app.models.enums import (
+    FailReason,
+    FileKind,
+    LocationStatus,
+    RequestStatus,
+    ShiftStatus,
+)
 from app.repositories import requests as req_repo
 from app.repositories import settings as settings_repo
 from app.repositories import shifts as shift_repo
@@ -127,14 +133,26 @@ async def complete(db: AsyncSession, driver: User, request_id: int, data: Comple
         raise invalid("act_incomplete", "Dalolatnoma to'liq emas: " + ", ".join(missing))
 
     radius = await settings_repo.gps_radius(db)
-    dist = distance_m(req.customer.lat, req.customer.lng, data.lat, data.lng)
+    cust = req.customer
+    note = None
+    if cust.location_status == LocationStatus.confirmed and cust.lat is not None and cust.lng is not None:
+        dist = distance_m(cust.lat, cust.lng, data.lat, data.lng)
+        in_radius = dist <= radius
+        if not in_radius:
+            note = f"radiusdan tashqarida: {dist} m"
+    else:
+        # Koordinata tasdiqlanmagan: radius tekshirilmaydi. Birinchi tashrif nuqtasi Manager tasdiqiga yuboriladi.
+        dist = in_radius = None
+        if cust.location_status == LocationStatus.none:
+            cust.lat, cust.lng, cust.location_status = data.lat, data.lng, LocationStatus.pending
+            note = "birinchi tashrif: koordinata Manager tasdiqini kutmoqda"
     act = Act(request_id=req.id, containers=data.containers, volume_m3=data.volume_m3, note=data.note.strip(),
-              lat=data.lat, lng=data.lng, distance_m=dist, radius_m=radius, in_radius=dist <= radius,
+              lat=data.lat, lng=data.lng, distance_m=dist, radius_m=radius, in_radius=in_radius,
               vehicle_plate=shift.vehicle.plate, completed_at=utcnow())
     db.add(act)
-    req.status = RequestStatus.done if act.in_radius else RequestStatus.suspect
+    req.status = RequestStatus.suspect if in_radius is False else RequestStatus.done
     req.finished_at = act.completed_at
-    events.record(db, req, driver.id, None if act.in_radius else f"radiusdan tashqarida: {dist} m")
+    events.record(db, req, driver.id, note)
     await db.commit()
     await events.broadcast(req)
     return req, act

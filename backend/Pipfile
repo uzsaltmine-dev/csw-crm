@@ -16,6 +16,7 @@ bcrypt = "==4.2.1"
 python-multipart = "==0.0.20"
 python-socketio = "==5.12.0"
 minio = "==7.2.12"
+openpyxl = "==3.1.5"
 
 [dev-packages]
 pytest = "==8.3.4"
