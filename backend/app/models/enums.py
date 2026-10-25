@@ -64,6 +64,25 @@ class LocationStatus(str, Enum):
     confirmed = "confirmed"  # tasdiqlangan — radius tekshiruvi shu nuqta bo'yicha
 
 
+class RequestSource(str, Enum):
+    phone = "phone"        # call-center qo'ng'irog'i
+    telegram = "telegram"
+    excel = "excel"
+    walk_in = "walk_in"    # shaxsan kelgan
+
+
+class AppealStatus(str, Enum):
+    new = "new"            # yuridik bo'lim ko'rib chiqishini kutmoqda
+    accepted = "accepted"  # korxona kartasi va ariza yaratildi
+    rejected = "rejected"
+
+
+# Bajarilgan hisoblanadigan holatlar (statistika va 72 soat): "suspect" ham yakunlangan dalolatnoma
+DONE_STATUSES = ("done", "suspect")
+# Hali bajarilmagan (kutilmoqda yoki muddati o'tgan)
+OPEN_STATUSES = ("new", "assigned", "enroute", "onsite", "failed")
+
+
 class SituationLevel(str, Enum):
     info = "info"
     warning = "warning"

@@ -6,6 +6,7 @@ export function homePath(user: User): string {
   switch (user.role) {
     case "driver": return "/driver";
     case "gps": return "/gps";
+    case "operator": return "/operator";
     case "admin":
     case "manager":
     case "legal": return "/admin";

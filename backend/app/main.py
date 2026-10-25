@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.v1 import admin, auth, customers, driver, gps, situation
+from app.api.v1 import admin, auth, callcenter, customers, driver, gps, situation
 from app.core.config import get_settings
 from app.core.errors import AppError, app_error_handler
 from app.middleware import CsrfHeaderMiddleware, RequestContextMiddleware
@@ -35,6 +35,21 @@ async def _purge_situation_daily() -> None:
         await asyncio.sleep(24 * 3600)
 
 
+async def _overdue_watch() -> None:
+    """Har 10 daqiqada: 72 soatlik muddati o'tgan arizalar — admin Vaziyat paneliga."""
+    from app.db.session import SessionLocal
+    from app.services.callcenter import check_overdue
+    while True:
+        try:
+            async with SessionLocal() as db:
+                n = await check_overdue(db)
+            if n:
+                log.info("overdue: %s ta ariza muddati o'tdi", n)
+        except Exception:  # noqa: BLE001
+            log.exception("overdue watch failed")
+        await asyncio.sleep(600)
+
+
 def create_app(storage=None) -> FastAPI:
     s = get_settings()
 
@@ -42,8 +57,10 @@ def create_app(storage=None) -> FastAPI:
     async def lifespan(app: FastAPI):
         app.state.storage = storage or (MemoryStorage() if s.storage_backend == "memory" else MinioStorage(s))
         purge = asyncio.create_task(_purge_situation_daily())
+        overdue = asyncio.create_task(_overdue_watch())
         yield
         purge.cancel()
+        overdue.cancel()
 
     app = FastAPI(title="CSW Chiqindi CRM API", version="0.1.0", lifespan=lifespan)
     app.add_exception_handler(AppError, app_error_handler)
@@ -51,7 +68,7 @@ def create_app(storage=None) -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(CORSMiddleware, allow_origins=s.cors_list, allow_credentials=True,
                        allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Request-ID"])
-    for r in (auth.router, driver.router, gps.router, admin.router, customers.router, situation.router):
+    for r in (auth.router, driver.router, gps.router, admin.router, customers.router, situation.router, callcenter.router):
         app.include_router(r, prefix="/api/v1")
 
     @app.get("/api/health", tags=["system"])

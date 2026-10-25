@@ -35,11 +35,15 @@ async def connect(sid, environ, auth):
         await sio.enter_room(sid, f"gps:{district}" if district else "gps:all")
     elif role == "driver":
         await sio.enter_room(sid, f"driver:{uid}")
+    elif role == "operator":
+        await sio.enter_room(sid, "operators")  # o'zi ochgan arizalar holati jonli
+    elif role == "legal":
+        await sio.enter_room(sid, "legal")      # yangi murojaatlar navbati
     return True
 
 
 async def emit_request_updated(payload: dict) -> None:
-    rooms = ["managers", "gps:all", f"gps:{payload['district_id']}"]
+    rooms = ["managers", "operators", "gps:all", f"gps:{payload['district_id']}"]
     if payload.get("driver_id"):
         rooms.append(f"driver:{payload['driver_id']}")
     await sio.emit("request:updated", payload, room=rooms)
@@ -52,3 +56,8 @@ async def emit_driver_location(payload: dict) -> None:
 async def emit_situation(payload: dict) -> None:
     """Vaziyat paneli: faqat admin."""
     await sio.emit("situation:new", payload, room="admins")
+
+
+async def emit_appeal_updated(payload: dict) -> None:
+    """Murojaat yaratildi/ko'rib chiqildi: yuridik bo'lim navbati va operator ekrani."""
+    await sio.emit("appeal:updated", payload, room=["legal", "operators", "managers"])

@@ -5,8 +5,8 @@ from sqlalchemy import Boolean, Date, DateTime, Enum as SAEnum, Float, ForeignKe
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, utcnow
-from app.models.enums import (ContractType, FailReason, FileKind, LocationStatus, RequestStatus, Role, ShiftStatus, SituationLevel,
-                              WasteType)
+from app.models.enums import (AppealStatus, ContractType, FailReason, FileKind, LocationStatus, RequestSource, RequestStatus, Role,
+                              ShiftStatus, SituationLevel, WasteType)
 
 
 def enum_col(enum_cls):
@@ -218,9 +218,52 @@ class Request(TimestampMixin, Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime)
     fail_reason: Mapped[FailReason | None] = mapped_column(enum_col(FailReason))
     fail_note: Mapped[str | None] = mapped_column(Text)
+    # Call-center: kim qo'ng'iroq qildi, qayerdan keldi, 72 soatlik muddat, takroriy ariza
+    source: Mapped[RequestSource] = mapped_column(enum_col(RequestSource), default=RequestSource.phone, server_default="phone")
+    caller_name: Mapped[str | None] = mapped_column(String(150))
+    caller_phone: Mapped[str | None] = mapped_column(String(30))
+    due_at: Mapped[datetime | None] = mapped_column(DateTime, index=True)
+    is_repeat: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    repeat_of_id: Mapped[int | None] = mapped_column(ForeignKey("requests.id"))
+    overdue_notified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    cancel_reason: Mapped[str | None] = mapped_column(String(500))
+
+    @property
+    def overdue(self) -> bool:
+        """Normativ muddat (72 soat) o'tgan va hali bajarilmagan."""
+        from app.db.base import utcnow
+        from app.models.enums import OPEN_STATUSES
+        return bool(self.due_at) and self.status.value in OPEN_STATUSES and utcnow() > self.due_at
+
     customer: Mapped[Customer] = relationship()
     contract: Mapped[Contract | None] = relationship()
     shift: Mapped[Shift | None] = relationship()
+
+
+class Appeal(TimestampMixin, Base):
+    """Birinchi murojaat: bazada yo'q korxona qo'ng'iroq qildi — yuridik bo'lim karta va shartnoma ochadi."""
+    __tablename__ = "appeals"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str | None] = mapped_column(String(20), unique=True)
+    status: Mapped[AppealStatus] = mapped_column(enum_col(AppealStatus), default=AppealStatus.new, index=True)
+    district_id: Mapped[int] = mapped_column(ForeignKey("districts.id"), index=True)
+    org_name: Mapped[str] = mapped_column(String(200))
+    stir: Mapped[str | None] = mapped_column(String(9))
+    address: Mapped[str | None] = mapped_column(String(255))
+    activity_type: Mapped[str | None] = mapped_column(String(100))
+    caller_name: Mapped[str | None] = mapped_column(String(150))
+    caller_phone: Mapped[str | None] = mapped_column(String(30))
+    source: Mapped[RequestSource] = mapped_column(enum_col(RequestSource), default=RequestSource.phone)
+    waste_type: Mapped[WasteType] = mapped_column(enum_col(WasteType), default=WasteType.household)
+    volume_estimate: Mapped[float | None] = mapped_column(Numeric(8, 2))
+    preferred_time: Mapped[str | None] = mapped_column(String(50))
+    note: Mapped[str | None] = mapped_column(Text)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    reviewed_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    reject_reason: Mapped[str | None] = mapped_column(String(500))
+    customer_id: Mapped[int | None] = mapped_column(ForeignKey("customers.id"))
+    request_id: Mapped[int | None] = mapped_column(ForeignKey("requests.id"))
 
 
 class NaryadCounter(Base):
@@ -302,5 +345,5 @@ class SituationRead(Base):
 __all__ = [
     "Base", "Region", "Provider", "District", "User", "Vehicle", "Shift", "Customer", "CustomerContact", "ImportBatch", "Contract",
     "Request", "NaryadCounter", "Act", "ActFile", "RequestEvent", "AppSetting", "SituationEvent", "SituationRead",
-    "UserDistrict", "UserPermission",
+    "UserDistrict", "UserPermission", "Appeal",
 ]

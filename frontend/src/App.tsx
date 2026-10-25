@@ -9,6 +9,7 @@ import { LoginPage } from "@/pages/LoginPage";
 import { ActPage } from "@/pages/driver/ActPage";
 import { DriverHome } from "@/pages/driver/DriverHome";
 import { GpsHome } from "@/pages/gps/GpsHome";
+import { OperatorHome } from "@/pages/operator/OperatorHome";
 import { AdminHome } from "@/pages/admin/AdminHome";
 import { ChangePasswordPage } from "@/pages/ChangePasswordPage";
 import { homePath } from "@/lib/routes";
@@ -73,6 +74,7 @@ export function App() {
         <Route path="/driver/requests/:id" element={<RequireRole roles={["driver"]}><DriverSection><ActPage /></DriverSection></RequireRole>} />
         <Route path="/gps" element={<RequireRole roles={["gps"]}><DriverLayout><GpsHome /></DriverLayout></RequireRole>} />
         <Route path="/admin" element={<RequireRole roles={["admin", "manager", "legal"]}><DriverLayout wide><AdminHome /></DriverLayout></RequireRole>} />
+        <Route path="/operator" element={<RequireRole roles={["operator"]}><DriverLayout wide><OperatorHome /></DriverLayout></RequireRole>} />
         <Route path="/change-password" element={<ChangePasswordPage />} />
         <Route path="*" element={<Home />} />
       </Routes>

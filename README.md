@@ -120,3 +120,14 @@ API'ni Postman bilan sinash: `Authorization: Bearer <token>` sarlavhasi bilan CS
   GPS/yurist/operator/haydovchilarni ko'radi va boshqaradi; faqat o'zida bor ruxsatlarni bera oladi.
 - Manager qo'shgan xodim admin tasdiqlamaguncha kira olmaydi ("Vaziyat" yoki "Xodimlar"da "Tasdiqlash").
 - GPS radiusi tuman bo'yicha (bo'sh bo'lsa umumiy). Vaziyat paneli — faqat admin; managerning har o'zgarishi u yerga yoziladi.
+
+## Call-center va statistika (PR #9)
+
+- **Operator** (`/operator`): korxonani telefon/nom/STIR bo'yicha topadi → ariza ochadi (xizmat turi, hajm, vaqt, qo'ng'iroq qiluvchi, manba).
+  Korxonada ochiq ariza bo'lsa — "Qayta ariza sifatida belgilaymi?" tasdig'i; ariza "qayta" belgisi bilan avvalgisiga bog'lanadi.
+  Korxona topilmasa — **birinchi murojaat** yuridik bo'limga; yurist karta (+ shartnoma) ochadi, ariza avtomatik GPS xodimiga o'tadi.
+- **72 soat**: har arizada muddat (`due_at`); muddati o'tganlari qizil belgilanadi va admin Vaziyat paneliga bir marta ogohlantirish tushadi.
+- **Statistika** (`stats.view`): bugun / oxirgi 5 kun / oxirgi 10 kun / shu oy — tushgan, qayta, kutilmoqda, muddatdan oshgan,
+  bajarilgan va bajarilmagan (soni va ulushi). Kartochka bosilsa — tumanlar kesimida diagramma va jadval. Manager — o'z tumanlari.
+- Yangi ruxsatlar: `requests.view/create/cancel`, `appeals.view/create/review`, `stats.view`. Demo login: `operator`.
+- Ovozli AI assistent bo'yicha kelishuvlar: `docs/plans/voice-ai-assistant.md`.
