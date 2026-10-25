@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Box, Button, Paper, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Box, Button, Paper, Stack, Typography } from "@mui/material";
 import { Navigate } from "react-router-dom";
 import { authApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
@@ -8,6 +8,7 @@ import { toast } from "@/lib/alerts";
 import { homePath } from "@/lib/routes";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setUser } from "@/store/authSlice";
+import { PasswordField } from "@/components/PasswordField";
 
 /** Admin vaqtinchalik parol bergan xodim birinchi kirishda shu yerga yo'naltiriladi. */
 export function ChangePasswordPage() {
@@ -46,9 +47,9 @@ export function ChangePasswordPage() {
           <Typography variant="h6">{t("change_pw_title")}</Typography>
           <Typography variant="body2" color="text.secondary">{t("change_pw_text")}</Typography>
           {error && <Alert severity="error">{error}</Alert>}
-          <TextField id="current-password" type="password" label={t("current_password")} value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required />
-          <TextField id="new-password" type="password" label={t("new_password")} value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" required />
-          <TextField id="repeat-password" type="password" label={t("repeat_password")} value={repeat} onChange={(e) => setRepeat(e.target.value)}
+          <PasswordField id="current-password" label={t("current_password")} value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required />
+          <PasswordField id="new-password" label={t("new_password")} value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" required />
+          <PasswordField id="repeat-password" label={t("repeat_password")} value={repeat} onChange={(e) => setRepeat(e.target.value)}
             error={mismatch} helperText={mismatch ? t("passwords_differ") : " "} autoComplete="new-password" required />
           <Button type="submit" variant="contained" size="large" disabled={busy || mismatch || !current || !next}>{t("save")}</Button>
         </Stack>

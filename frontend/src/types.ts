@@ -166,3 +166,19 @@ export interface Coords {
   lng: number;
   accuracy?: number;
 }
+
+export type SituationLevel = "info" | "warning" | "error";
+
+export interface SituationEvent {
+  id: number;
+  level: SituationLevel;
+  kind: string;
+  message: string;
+  params: Record<string, unknown>;
+  district_id: number | null;
+  actor_id: number | null;
+  actor_name?: string | null;
+  ref_type: string | null;
+  ref_id: number | null;
+  created_at: string;
+}

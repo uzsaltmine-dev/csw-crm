@@ -45,3 +45,8 @@ async def emit_request_updated(payload: dict) -> None:
 
 async def emit_driver_location(payload: dict) -> None:
     await sio.emit("driver:location", payload, room=["managers", "gps:all", f"gps:{payload['district_id']}"])
+
+
+async def emit_situation(payload: dict) -> None:
+    """Vaziyat paneli: faqat admin va manager."""
+    await sio.emit("situation:new", payload, room="managers")

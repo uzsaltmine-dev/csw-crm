@@ -355,3 +355,29 @@ class ImportBatchOut(ORM):
     customers_merged: int
     rows_skipped: int
     created_at: datetime
+
+
+# --- vaziyat paneli ---
+class SituationOut(BaseModel):
+    id: int
+    level: str
+    kind: str
+    message: str
+    params: dict = {}
+    district_id: int | None
+    actor_id: int | None
+    actor_name: str | None = None
+    ref_type: str | None
+    ref_id: int | None
+    created_at: datetime
+
+
+class SituationPage(BaseModel):
+    items: list[SituationOut]
+    total: int
+    unread: int
+    last_read_id: int
+
+
+class SituationReadIn(BaseModel):
+    up_to_id: int | None = None  # bo'sh — hammasi o'qildi

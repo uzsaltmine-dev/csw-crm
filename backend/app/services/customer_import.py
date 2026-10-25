@@ -20,7 +20,8 @@ from sqlalchemy.orm import selectinload
 
 from app.core.errors import invalid
 from app.models import Customer, CustomerContact, District, ImportBatch, Region, User
-from app.models.enums import LocationStatus
+from app.models.enums import LocationStatus, SituationLevel
+from app.services import situation
 from app.services.normalize import format_phone, is_city, key, phone_digits, place_key
 
 MAX_ROWS = 50_000
@@ -231,6 +232,11 @@ async def run(db: AsyncSession, user: User, file_name: str, content: bytes, dry_
         plan.rows_total, new, merged, result.rows_skipped)
     batch.report = json.dumps({"sheet": plan.sheet, "septic_rows": plan.septic_rows, "contacts_added": contacts_added,
                                "by_district": result.by_district, "errors": errors}, ensure_ascii=False)
-    await db.commit()
+    situation.add(db, SituationLevel.info, "import_done",
+                  f"Excel import «{batch.file_name}»: {new} ta yangi korxona, {merged} ta birlashtirildi, "
+                  f"{result.rows_skipped} ta qator o'tkazib yuborildi",
+                  params={"file": batch.file_name, "new": new, "merged": merged, "skipped": result.rows_skipped},
+                  actor_id=user.id, ref=("import", batch.id))
+    await situation.commit(db)
     result.batch_id = batch.id
     return result

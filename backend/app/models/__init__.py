@@ -5,7 +5,8 @@ from sqlalchemy import Boolean, Date, DateTime, Enum as SAEnum, Float, ForeignKe
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, utcnow
-from app.models.enums import ContractType, FailReason, FileKind, LocationStatus, RequestStatus, Role, ShiftStatus, WasteType
+from app.models.enums import (ContractType, FailReason, FileKind, LocationStatus, RequestStatus, Role, ShiftStatus, SituationLevel,
+                              WasteType)
 
 
 def enum_col(enum_cls):
@@ -236,7 +237,28 @@ class AppSetting(Base):
     value: Mapped[str] = mapped_column(String(255))
 
 
+class SituationEvent(TimestampMixin, Base):
+    """Vaziyat paneli: admin va manager ko'rishi kerak bo'lgan hodisalar (90 kun saqlanadi)."""
+    __tablename__ = "situation_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    level: Mapped[SituationLevel] = mapped_column(enum_col(SituationLevel), index=True)
+    kind: Mapped[str] = mapped_column(String(40), index=True)  # frontend shu kalit bo'yicha tarjima qiladi
+    message: Mapped[str] = mapped_column(String(500))          # o'zbekcha matn (log va zaxira uchun)
+    params: Mapped[str | None] = mapped_column(Text)           # JSON: tarjima uchun qiymatlar
+    district_id: Mapped[int | None] = mapped_column(ForeignKey("districts.id"), index=True)
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    ref_type: Mapped[str | None] = mapped_column(String(20))   # request / customer / user / district / vehicle / import
+    ref_id: Mapped[int | None] = mapped_column(Integer)
+
+
+class SituationRead(Base):
+    """Har bir xodim qaysi hodisagacha o'qigani."""
+    __tablename__ = "situation_reads"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), primary_key=True)
+    last_read_id: Mapped[int] = mapped_column(Integer, default=0)
+
+
 __all__ = [
     "Base", "Region", "Provider", "District", "User", "Vehicle", "Shift", "Customer", "CustomerContact", "ImportBatch", "Contract",
-    "Request", "NaryadCounter", "Act", "ActFile", "RequestEvent", "AppSetting",
+    "Request", "NaryadCounter", "Act", "ActFile", "RequestEvent", "AppSetting", "SituationEvent", "SituationRead",
 ]

@@ -32,6 +32,14 @@ Monorepo:
   Manager tasdiqlaydi → keyingi tashriflar shu nuqta bo'yicha tekshiriladi.
 - Yangi xizmat turi: **assenizator** (`septic`).
 
+## Vaziyat paneli (admin va manager)
+
+- `/admin#situation` va navbardagi qo'ng'iroqcha: o'qilmagan hodisalar soni, yangi hodisa kelganda popup (Socket.IO `situation:new`).
+- Serverda saqlanadigan hodisalar (90 kun): akkaunt bloklandi, shubhali dalolatnoma, bajarib bo'lmadi, koordinata tasdig'i,
+  Excel import, xodim/tuman/mashina faolsizlantirildi yoki faollashtirildi, parol tiklandi, GPS radiusi o'zgardi.
+- "Shu sessiyadagi xabarlar": ekranda chiqqan barcha popuplar (forma xatolari ham), sahifa yangilanguncha.
+- O'qilganlik har bir xodim uchun alohida.
+
 ## Jonli demo (Render, bepul)
 
 `render.yaml` + `Dockerfile.demo`: bitta konteynerda frontend va backend, SQLite, fayllar xotirada.
