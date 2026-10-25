@@ -170,7 +170,53 @@ export interface DriverTask {
   customer: Customer;
   contract: Contract | null;
   files: FileKind[];
+  source?: RequestSource;
+  due_at?: string | null;
+  overdue?: boolean;
+  is_repeat?: boolean;
 }
+
+export type RequestSource = "phone" | "telegram" | "excel" | "walk_in";
+export type WasteType = "household" | "construction" | "bulky" | "green" | "septic";
+
+export interface RequestItem extends Omit<DriverTask, "files"> {
+  caller_name: string | null;
+  caller_phone: string | null;
+  repeat_of_id: number | null;
+  created_by_id: number | null;
+  finished_at: string | null;
+  cancel_reason: string | null;
+}
+
+export interface Appeal {
+  id: number;
+  number: string | null;
+  status: "new" | "accepted" | "rejected";
+  district_id: number;
+  org_name: string;
+  stir: string | null;
+  address: string | null;
+  activity_type: string | null;
+  caller_name: string | null;
+  caller_phone: string | null;
+  source: RequestSource;
+  waste_type: WasteType;
+  volume_estimate: string | null;
+  preferred_time: string | null;
+  note: string | null;
+  created_by_id: number | null;
+  reviewed_at: string | null;
+  reject_reason: string | null;
+  customer_id: number | null;
+  request_id: number | null;
+  created_at: string;
+}
+
+export interface StatMetrics {
+  received: number; repeat: number; pending: number; overdue: number; done: number; not_done: number;
+  done_share: number; not_done_share: number;
+}
+export interface Stats { period: string; since: string; total: StatMetrics; districts: (StatMetrics & { district_id: number; name: string })[] }
 
 export interface CompleteResult {
   request: DriverTask;

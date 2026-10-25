@@ -35,7 +35,8 @@ async def test_me_has_permissions_and_scope(world, client_factory):
     me = (await admin.get("/api/v1/auth/me")).json()
     assert "staff.permissions" in me["permissions"] and me["district_ids"] == []
     me = (await mgr.get("/api/v1/auth/me")).json()
-    assert me["permissions"] == sorted(["customers.view", "customers.location_confirm", "staff.view", "vehicles.view", "settings.view"])
+    assert me["permissions"] == sorted(["customers.view", "customers.location_confirm", "staff.view", "vehicles.view", "settings.view",
+                                        "requests.view", "stats.view"])
     assert me["district_ids"] == sorted(world["districts"].values())
     assert (await gps.get("/api/v1/auth/me")).json()["district_ids"] == [world["districts"]["a"]]
 
@@ -163,7 +164,8 @@ async def test_legal_and_operator_get_multiple_districts(world, client_factory):
     a, b = world["districts"]["a"], world["districts"]["b"]
     r = await admin.post("/api/v1/admin/users", json={"username": "op1", "full_name": "Operator", "role": "operator",
                                                       "district_ids": [a, b], "password": "Vaqtincha1"})
-    assert r.status_code == 201 and r.json()["district_ids"] == [a, b] and r.json()["permissions"] == ["customers.view"]
+    assert r.status_code == 201 and r.json()["district_ids"] == [a, b]
+    assert r.json()["permissions"] == ["appeals.create", "appeals.view", "customers.view", "requests.create", "requests.view"]
     uid = r.json()["id"]
     r = await admin.put(f"/api/v1/admin/users/{uid}/access", json={"permissions": ["customers.view"], "district_ids": [b]})
     assert r.json()["district_ids"] == [b]

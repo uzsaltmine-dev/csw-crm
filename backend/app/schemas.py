@@ -3,16 +3,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import (
-    ContractType,
-    FailReason,
-    FileKind,
-    LocationStatus,
-    RequestStatus,
-    Role,
-    ShiftStatus,
-    WasteType,
-)
+from app.models.enums import (AppealStatus, ContractType, FailReason, FileKind, LocationStatus, RequestSource, RequestStatus, Role,
+                              ShiftStatus, WasteType)
 
 
 class ORM(BaseModel):
@@ -256,6 +248,11 @@ class RequestOut(ORM):
     assigned_at: datetime | None
     customer: CustomerOut
     contract: ContractOut | None
+    # call-center
+    source: RequestSource = RequestSource.phone
+    due_at: datetime | None = None
+    overdue: bool = False
+    is_repeat: bool = False
 
 
 class DriverTaskOut(RequestOut):
@@ -436,3 +433,104 @@ class SituationPage(BaseModel):
 
 class SituationReadIn(BaseModel):
     up_to_id: int | None = None  # bo'sh — hammasi o'qildi
+
+
+# --- call-center: arizalar va murojaatlar ---
+class RequestCreateIn(BaseModel):
+    customer_id: int
+    waste_type: WasteType = WasteType.household
+    volume_estimate: Decimal | None = Field(default=None, gt=0, le=1000, max_digits=8, decimal_places=2)
+    preferred_time: str | None = Field(default=None, max_length=50)
+    note: str | None = Field(default=None, max_length=2000)
+    caller_name: str | None = Field(default=None, max_length=150)
+    caller_phone: str | None = Field(default=None, max_length=30)
+    source: RequestSource = RequestSource.phone
+    confirm_repeat: bool = False  # korxonada ochiq ariza bor — operator "qayta ariza" deb tasdiqladi
+
+
+class RequestListOut(RequestOut):
+    caller_name: str | None = None
+    caller_phone: str | None = None
+    repeat_of_id: int | None = None
+    created_by_id: int | None = None
+    finished_at: datetime | None = None
+    cancel_reason: str | None = None
+
+
+class RequestPage(BaseModel):
+    items: list[RequestListOut]
+    total: int
+
+
+class ReasonIn(BaseModel):
+    reason: str = Field(min_length=2, max_length=500)
+
+
+class AppealIn(BaseModel):
+    district_id: int
+    org_name: str = Field(min_length=2, max_length=200)
+    stir: str | None = Field(default=None, pattern=r"^\d{9}$")
+    address: str | None = Field(default=None, max_length=255)
+    activity_type: str | None = Field(default=None, max_length=100)
+    caller_name: str | None = Field(default=None, max_length=150)
+    caller_phone: str | None = Field(default=None, max_length=30)
+    source: RequestSource = RequestSource.phone
+    waste_type: WasteType = WasteType.household
+    volume_estimate: Decimal | None = Field(default=None, gt=0, le=1000, max_digits=8, decimal_places=2)
+    preferred_time: str | None = Field(default=None, max_length=50)
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class AppealOut(ORM):
+    id: int
+    number: str | None
+    status: AppealStatus
+    district_id: int
+    org_name: str
+    stir: str | None
+    address: str | None
+    activity_type: str | None
+    caller_name: str | None
+    caller_phone: str | None
+    source: RequestSource
+    waste_type: WasteType
+    volume_estimate: Decimal | None
+    preferred_time: str | None
+    note: str | None
+    created_by_id: int | None
+    reviewed_by_id: int | None
+    reviewed_at: datetime | None
+    reject_reason: str | None
+    customer_id: int | None
+    request_id: int | None
+    created_at: datetime
+
+
+class AppealAcceptIn(BaseModel):
+    """Yurist murojaat asosida korxona kartasini (va ixtiyoriy shartnomani) yaratadi — ariza avtomatik ochiladi."""
+    customer: CustomerIn
+    contract: ContractIn | None = None
+
+
+# --- statistika ---
+class StatMetrics(BaseModel):
+    received: int = 0
+    repeat: int = 0
+    pending: int = 0
+    overdue: int = 0
+    done: int = 0
+    not_done: int = 0
+    done_share: float = 0.0
+    not_done_share: float = 0.0
+
+
+class DistrictStats(StatMetrics):
+    district_id: int
+    name: str
+
+
+class StatsOut(BaseModel):
+    period: str
+    since: datetime
+    total: StatMetrics
+    districts: list[DistrictStats]

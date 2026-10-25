@@ -48,6 +48,7 @@ async def world(sessionmaker):
             "manager": User(username="manager", password_hash=pwd, full_name="Manager", role=Role.manager),
             "admin": User(username="admin", password_hash=pwd, full_name="Admin", role=Role.admin),
             "legal": User(username="legal", password_hash=pwd, full_name="Yurist", role=Role.legal),
+            "operator": User(username="operator", password_hash=pwd, full_name="Operator", role=Role.operator),
         }
         for u in users.values():
             apply_template(u, [da.id, db_.id])

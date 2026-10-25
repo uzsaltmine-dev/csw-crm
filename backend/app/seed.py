@@ -13,7 +13,8 @@ from app.core.permissions import apply_template
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models import AppSetting, Contract, Customer, District, Provider, Region, Request, User, UserDistrict, Vehicle
-from app.models.enums import ContractType, LocationStatus, Role, WasteType
+from app.db.base import utcnow
+from app.models.enums import ContractType, LocationStatus, RequestStatus, Role, WasteType
 
 REGIONS = {
     "Andijon viloyati": ("Bio Tex Eko", "BTE", "60", [
@@ -74,9 +75,22 @@ async def seed() -> None:
                               type=ContractType.monthly, price=1_200_000, valid_from=date.today() - timedelta(days=30), valid_to=date.today() + timedelta(days=365))
                 db.add(ct)
                 await db.flush()
+                now = utcnow()
                 for k in range(REQUESTS_PER_DISTRICT):
                     r = Request(customer_id=c.id, contract_id=ct.id, district_id=d.id, waste_type=WasteType.household,
-                                volume_estimate=6, preferred_time="08:00–12:00", note=f"Namunaviy ariza {k + 1}")
+                                volume_estimate=6, preferred_time="08:00–12:00", note=f"Namunaviy ariza {k + 1}",
+                                due_at=now + timedelta(hours=72), is_repeat=k == REQUESTS_PER_DISTRICT - 1,
+                                caller_name="Namuna qo'ng'iroq qiluvchi", caller_phone="+998 91 111-11-11")
+                    db.add(r)
+                    await db.flush()
+                    r.number = f"AR-{r.id:06d}"
+                # Statistika uchun tarix: 6 kun oldin bajarilgan va 4 kun oldin ochilib muddati o'tgan ariza
+                for days, status in ((6, RequestStatus.done), (4, RequestStatus.new)):
+                    created = now - timedelta(days=days)
+                    r = Request(customer_id=c.id, contract_id=ct.id, district_id=d.id, waste_type=WasteType.household,
+                                volume_estimate=6, note="Namunaviy (tarix)", status=status, created_at=created,
+                                due_at=created + timedelta(hours=72), finished_at=created + timedelta(hours=20) if status == RequestStatus.done else None,
+                                overdue_notified=True)
                     db.add(r)
                     await db.flush()
                     r.number = f"AR-{r.id:06d}"
@@ -88,13 +102,18 @@ async def seed() -> None:
                 db.add(c2)
                 await db.flush()
                 r = Request(customer_id=c2.id, district_id=d.id, waste_type=WasteType.septic, volume_estimate=4,
-                            note="Assenizator: hojatxona chuquri to'lgan")
+                            note="Assenizator: hojatxona chuquri to'lgan", due_at=utcnow() + timedelta(hours=72))
                 db.add(r)
                 await db.flush()
                 r.number = f"AR-{r.id:06d}"
-        db.add_all([UserDistrict(user_id=u.id, district_id=d) for u in (manager, legal) for d in district_ids])
+        # Call-center operatori (demo: barcha tumanlar)
+        operator = User(username="operator", password_hash=pwd, full_name="Call-center operatori", role=Role.operator)
+        apply_template(operator)
+        db.add(operator)
+        await db.flush()
+        db.add_all([UserDistrict(user_id=u.id, district_id=d) for u in (manager, legal, operator) for d in district_ids])
         await db.commit()
-        print("Seed tayyor: admin, manager, legal, gps1..gps12, driver11..driver122")
+        print("Seed tayyor: admin, manager, legal, operator, gps1..gps12, driver11..driver122")
 
 
 if __name__ == "__main__":

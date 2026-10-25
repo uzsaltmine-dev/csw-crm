@@ -12,16 +12,20 @@ MODULES: dict[str, list[str]] = {
     "staff": ["view", "create", "edit", "deactivate", "reset_password", "permissions"],
     "vehicles": ["view", "create", "edit", "deactivate"],
     "settings": ["view", "radius_edit"],
+    "requests": ["view", "create", "cancel"],
+    "appeals": ["view", "create", "review"],
+    "stats": ["view"],
 }
 ALL_CODES: frozenset[str] = frozenset(f"{m}.{a}" for m, actions in MODULES.items() for a in actions)
 
 # Hozirgi xatti-harakatni saqlaydigan andozalar (migratsiya mavjud xodimlarni shu bilan to'ldiradi)
 ROLE_TEMPLATES: dict[Role, list[str]] = {
     Role.admin: [],
-    Role.manager: ["customers.view", "customers.location_confirm", "staff.view", "vehicles.view", "settings.view"],
-    Role.legal: ["customers.view", "customers.create", "customers.edit", "customers.contract"],
-    Role.gps: ["customers.view"],
-    Role.operator: ["customers.view"],
+    Role.manager: ["customers.view", "customers.location_confirm", "staff.view", "vehicles.view", "settings.view",
+                   "requests.view", "stats.view"],
+    Role.legal: ["customers.view", "customers.create", "customers.edit", "customers.contract", "appeals.view", "appeals.review"],
+    Role.gps: ["customers.view", "requests.view"],
+    Role.operator: ["customers.view", "requests.view", "requests.create", "appeals.view", "appeals.create"],
     Role.driver: [],
 }
 

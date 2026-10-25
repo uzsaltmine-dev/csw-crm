@@ -7,6 +7,7 @@ import { useI18n } from "@/i18n/I18nContext";
 import { toast } from "@/lib/alerts";
 import { formatDateTime } from "@/lib/format";
 import { getSocket } from "@/lib/socket";
+import { RequestChips } from "@/pages/operator/OperatorHome";
 import type { DriverTask, GpsDriver, Vehicle } from "@/types";
 
 /** GPS xodimi: ertalab smena ochadi (haydovchi + bo'sh mashina) va yangi arizalarni smenadagi haydovchiga biriktiradi.
@@ -85,9 +86,10 @@ export function GpsHome() {
             <Stack key={r.id} direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 1.5 }}>
               <Stack sx={{ flex: 1, minWidth: 0 }}>
                 <Typography fontWeight={600}>{r.number} · {r.customer.name}</Typography>
-                <Typography variant="body2" color="text.secondary">{r.customer.address} · {t("created")}: {formatDateTime(new Date(r.created_at + "Z"))}</Typography>
-                {(r.waste_type === "septic" || r.customer.missing_fields.length > 0) && <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: "wrap" }}>
-                  {r.waste_type === "septic" && <Chip size="small" color="info" label={t("w_septic")} />}
+                <Typography variant="body2" color="text.secondary">{r.customer.address} · {t("created")}: {formatDateTime(new Date(r.created_at + "Z"))}
+                  {r.due_at && <> · {t("due_at")}: {formatDateTime(new Date(r.due_at + "Z"))}</>}</Typography>
+                {(r.waste_type === "septic" || r.customer.missing_fields.length > 0 || r.is_repeat || r.overdue) && <Stack direction="row" spacing={0.5} sx={{ mt: 0.5, flexWrap: "wrap" }}>
+                  <RequestChips r={r} />
                   {r.customer.missing_fields.map((m) => <Chip key={m} size="small" color="error" variant="outlined" label={t(m === "stir" ? "missing_stir" : "missing_contract")} />)}
                 </Stack>}
                 {r.customer.missing_fields.length > 0 && <Typography variant="caption" color="error">{t("cannot_assign_hint")}</Typography>}

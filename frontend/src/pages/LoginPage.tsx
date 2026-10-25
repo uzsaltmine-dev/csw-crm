@@ -13,7 +13,7 @@ import { login } from "@/store/authSlice";
 
 const DEMO_ACCOUNTS: { username: string; role: MessageKey }[] = [
   { username: "admin", role: "r_admin" }, { username: "manager", role: "r_manager" }, { username: "legal", role: "r_legal" },
-  { username: "gps4", role: "r_gps" }, { username: "driver41", role: "r_driver" },
+  { username: "operator", role: "r_operator" }, { username: "gps4", role: "r_gps" }, { username: "driver41", role: "r_driver" },
 ];
 
 export function LoginPage() {

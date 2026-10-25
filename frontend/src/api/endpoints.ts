@@ -1,7 +1,7 @@
 import { api } from "./client";
 import { clearTokens, saveTokens, type Tokens } from "@/lib/session";
 import { closeSocket } from "@/lib/socket";
-import type { Access, AdminUser, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
+import type { Access, AdminUser, Appeal, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
   GpsDriver, ImportBatch, ImportResult, LocationStatus, Region, Role, Shift, SituationEvent, SituationLevel, User, Vehicle } from "@/types";
 
 export const gpsApi = {
@@ -112,4 +112,28 @@ export const situationApi = {
     api.get<{ items: SituationEvent[]; total: number; unread: number; last_read_id: number }>("/situation", { params }).then((r) => r.data),
   unread: () => api.get<{ unread: number }>("/situation/unread").then((r) => r.data),
   markRead: (up_to_id?: number) => api.post<{ unread: number; last_read_id: number }>("/situation/read", { up_to_id }).then((r) => r.data),
+};
+
+export type OrderFields = { waste_type: WasteType; volume_estimate?: number | null; preferred_time?: string | null; note?: string | null;
+  caller_name?: string | null; caller_phone?: string | null; source: RequestSource };
+export type AppealCreate = OrderFields & { district_id: number; org_name: string; stir?: string | null; address?: string | null; activity_type?: string | null };
+
+export const requestsApi = {
+  list: (params: { mine?: boolean; overdue?: boolean; status?: string; district_id?: number; q?: string; limit?: number; offset?: number }) =>
+    api.get<{ items: RequestItem[]; total: number }>("/requests", { params }).then((r) => r.data),
+  openFor: (customer_id: number) => api.get<RequestItem[]>("/requests/open", { params: { customer_id } }).then((r) => r.data),
+  create: (body: OrderFields & { customer_id: number; confirm_repeat?: boolean }) => api.post<RequestItem>("/requests", body).then((r) => r.data),
+  cancel: (id: number, reason: string) => api.post<RequestItem>(`/requests/${id}/cancel`, { reason }).then((r) => r.data),
+};
+
+export const appealsApi = {
+  list: (params: { status?: string; mine?: boolean }) => api.get<Appeal[]>("/appeals", { params }).then((r) => r.data),
+  create: (body: AppealCreate) => api.post<Appeal>("/appeals", body).then((r) => r.data),
+  accept: (id: number, body: { customer: CustomerFields; contract?: ContractCreate | null }) =>
+    api.post<Appeal>(`/appeals/${id}/accept`, body).then((r) => r.data),
+  reject: (id: number, reason: string) => api.post<Appeal>(`/appeals/${id}/reject`, { reason }).then((r) => r.data),
+};
+
+export const statsApi = {
+  summary: (period: "today" | "month" | "last10" | "last5") => api.get<Stats>("/stats/summary", { params: { period } }).then((r) => r.data),
 };
