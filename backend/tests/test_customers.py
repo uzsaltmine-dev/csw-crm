@@ -63,9 +63,9 @@ async def test_import_validation_and_permissions(world, client_factory):
     admin, manager = await client_factory("admin"), await client_factory("manager")
     assert (await _import(manager, dry_run=True)).status_code == 403
     r = await _import(admin, dry_run=True, content=b"not an excel")
-    assert r.json()["error"]["code"] == "bad_excel"
-    r = await _import(admin, dry_run=True, name="data.csv")
-    assert r.json()["error"]["code"] == "bad_excel"
+    assert r.json()["error"]["code"] == "bad_file"
+    r = await _import(admin, dry_run=True, name="data.txt")
+    assert r.json()["error"]["code"] == "unsupported_format"
     r = await _import(admin, dry_run=True, content=build(rows=[], header=["A", "B", "C"]))
     assert r.json()["error"]["code"] == "no_sheet"
 

@@ -386,6 +386,7 @@ class ImportErrorOut(BaseModel):
 
 class ImportResultOut(BaseModel):
     sheet: str
+    file_kind: str = "xlsx"
     rows_total: int
     rows_ok: int
     rows_skipped: int
