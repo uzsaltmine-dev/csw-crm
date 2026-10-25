@@ -54,7 +54,8 @@ async def set_enroute(db: AsyncSession, driver: User, request_id: int) -> Reques
 
 
 async def upload_file(db: AsyncSession, storage: Storage, driver: User, request_id: int,
-                      kind: FileKind, image: UploadedImage, lat: float | None, lng: float | None) -> ActFile:
+                      kind: FileKind, image: UploadedImage, lat: float | None, lng: float | None,
+                      accuracy_m: int | None = None) -> ActFile:
     await _active_shift(db, driver)
     req = await _own_request(db, driver, request_id, lock=True)
     if req.status not in (RequestStatus.enroute, RequestStatus.onsite):
@@ -73,9 +74,10 @@ async def upload_file(db: AsyncSession, storage: Storage, driver: User, request_
     row = files.get(kind)  # qayta olish mumkin: oxirgisi saqlanadi
     if row:
         row.storage_key, row.content_type, row.size_bytes, row.lat, row.lng = key, image.content_type, len(image.data), lat, lng
+        row.accuracy_m = accuracy_m
     else:
         row = ActFile(request_id=req.id, kind=kind, storage_key=key, content_type=image.content_type,
-                      size_bytes=len(image.data), lat=lat, lng=lng, uploaded_by_id=driver.id)
+                      size_bytes=len(image.data), lat=lat, lng=lng, accuracy_m=accuracy_m, uploaded_by_id=driver.id)
         db.add(row)
     if kind == FileKind.before and req.status == RequestStatus.enroute:
         req.status = RequestStatus.onsite

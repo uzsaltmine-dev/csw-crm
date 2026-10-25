@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     max_upload_mb: int = 10
     login_max_attempts: int = 5
     login_lock_minutes: int = 15
+    # Demo/sinov: har brauzer tabida alohida sessiya (token cookie o'rniga tab xotirasida). Prod'da o'chiq — httpOnly cookie.
+    tab_sessions: bool = False
 
     static_dir: str | None = None  # demo: frontend build'i shu papkadan beriladi (bitta konteyner)
     storage_backend: str = "minio"  # "memory" — MinIO'siz lokal ishlab chiqish uchun (fayllar xotirada)

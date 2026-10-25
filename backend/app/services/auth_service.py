@@ -43,7 +43,8 @@ MIN_PASSWORD = 8
 
 
 def check_password_strength(password: str) -> None:
-    if len(password) < MIN_PASSWORD or password.isdigit() or password.isalpha():
+    # Frontend'dagi talablar ro'yxati bilan bir xil: kamida 8 belgi, kamida bitta harf va bitta raqam
+    if len(password) < MIN_PASSWORD or not any(c.isalpha() for c in password) or not any(c.isdigit() for c in password):
         raise AppError(422, "weak_password", f"Parol kamida {MIN_PASSWORD} belgi bo'lib, harf va raqam aralash bo'lishi kerak")
 
 

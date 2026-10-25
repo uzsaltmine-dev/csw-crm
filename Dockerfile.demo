@@ -27,6 +27,7 @@ ENV APP_ENV=demo \
     STORAGE_BACKEND=memory \
     STATIC_DIR=/app/static \
     COOKIE_SECURE=true \
-    SEED_PASSWORD=demo1234
+    SEED_PASSWORD=demo1234 \
+    TAB_SESSIONS=true
 EXPOSE 8000
 CMD ["demo-start"]

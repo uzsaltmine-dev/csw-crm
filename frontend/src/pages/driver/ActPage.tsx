@@ -2,21 +2,21 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Alert, Box, Button, Chip, Divider, LinearProgress, Paper, Stack, TextField, Typography } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
-import Swal from "sweetalert2";
 import { useNavigate, useParams } from "react-router-dom";
 import { driverApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
+import { CollectedCapture } from "@/components/CollectedCapture";
 import { PhotoCapture } from "@/components/PhotoCapture";
 import { SignaturePad } from "@/components/SignaturePad";
 import { distanceM, useGeolocation } from "@/hooks/useGeolocation";
 import { useOnline } from "@/hooks/useOnline";
 import { useI18n } from "@/i18n/I18nContext";
 import type { MessageKey } from "@/i18n/messages";
-import { toast } from "@/lib/alerts";
+import { chooseDialog, toast } from "@/lib/alerts";
 import { formatDateTime } from "@/lib/format";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { refreshDriver, removeTask, upsertTask } from "@/store/driverSlice";
-import type { FailReason, FileKind } from "@/types";
+import type { Coords, FailReason, FileKind } from "@/types";
 
 const LOCATION_EVERY_MS = 30_000;
 type Draft = { containers: string; volume: string; note: string };
@@ -59,9 +59,11 @@ export function ActPage() {
   const fields = {
     before: files.has("before"), gps: !!geo.coords, date: true, plate: !!shift, driver: true, naryad: !!task?.naryad_no,
     contract: !!task?.contract, inn: !!task?.customer.stir, containers: Number(draft.containers) >= 1,
-    note: draft.note.trim().length > 0, volume: Number(draft.volume) > 0, sign: files.has("sign"), face: files.has("face"), after: files.has("after"),
+    note: draft.note.trim().length > 0, volume: Number(draft.volume) > 0, sign: files.has("sign"), face: files.has("face"),
   };
+  // 13 maydon formada; 14-si — "chiqindi olib ketildi" rasmi (joylashuvi bilan) oxirgi tugma orqali olinadi
   const filled = Object.values(fields).filter(Boolean).length;
+  const formReady = filled === Object.keys(fields).length;
 
   if (!task || !shift) {
     return <Alert severity="info" action={<Button onClick={() => nav("/driver")}>{t("back")}</Button>}>{t("no_tasks")}</Alert>;
@@ -88,9 +90,12 @@ export function ActPage() {
 
   const goEnroute = () => run(async () => { dispatch(upsertTask({ ...(await driverApi.enroute(task.id)), files: task.files })); });
 
-  const complete = () => run(async () => {
+  /** "Chiqindi olib ketildi" rasmi va u olingan joy → dalolatnoma yuboriladi. */
+  const submitCollected = (photo: Blob, at: Coords) => run(async () => {
+    await driverApi.upload(task.id, "after", photo, at);
+    markFile("after");
     const res = await driverApi.complete(task.id, {
-      containers: Number(draft.containers), volume_m3: Number(draft.volume), note: draft.note.trim(), lat: geo.coords!.lat, lng: geo.coords!.lng,
+      containers: Number(draft.containers), volume_m3: Number(draft.volume), note: draft.note.trim(), lat: at.lat, lng: at.lng,
     });
     sessionStorage.removeItem(`act:${task.id}`);
     if (res.act.in_radius === null) toast(t("done_first_visit"), "info");
@@ -101,13 +106,11 @@ export function ActPage() {
 
   const fail = async () => {
     const reasons: FailReason[] = ["no_waste", "no_recipient", "no_access"];
-    const r = await Swal.fire({
-      title: t("fail_reason"), input: "select", inputOptions: Object.fromEntries(reasons.map((x) => [x, t(`fr_${x}` as MessageKey)])),
-      showCancelButton: true, confirmButtonText: t("confirm"), cancelButtonText: t("cancel"), confirmButtonColor: "#b3372b", heightAuto: false,
-    });
-    if (!r.isConfirmed) return;
+    const reason = await chooseDialog(t("fail_reason"), reasons.map((x) => ({ value: x, label: t(`fr_${x}` as MessageKey) })),
+      t("confirm"), t("cancel"), true);
+    if (!reason) return;
     await run(async () => {
-      await driverApi.fail(task.id, r.value as FailReason, draft.note || undefined);
+      await driverApi.fail(task.id, reason as FailReason, draft.note || undefined);
       toast(t("failed_ok"), "info");
       dispatch(removeTask(task.id));
       dispatch(refreshDriver());
@@ -178,15 +181,13 @@ export function ActPage() {
           <PhotoCapture facing="user" done={fields.face} disabled={!online || !fields.before} onCapture={upload("face", false)} />
         </Step>
 
-        <Step n={4} title={t("step4")} ok={fields.after}>
-          <PhotoCapture done={fields.after} disabled={!online || !fields.before || !geo.coords} onCapture={upload("after", true)} />
-        </Step>
-
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Typography variant="subtitle2">{t("progress", { n: filled })}</Typography>
           <LinearProgress variant="determinate" value={(filled / 14) * 100} sx={{ my: 1.5, height: 8, borderRadius: 4 }} />
+          {!formReady && <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{t("collected_locked")}</Typography>}
           <Stack direction="row" spacing={2} justifyContent="space-between" flexWrap="wrap" useFlexGap>
-            <Button variant="contained" size="large" onClick={complete} disabled={busy || !online || filled < 14}>{t("complete")}</Button>
+            <CollectedCapture disabled={!online || !formReady} busy={busy} online={online} coords={geo.coords} customer={c}
+              onSubmit={submitCollected} />
             <Button color="error" variant="outlined" onClick={fail} disabled={busy || !online}>{t("fail")}</Button>
           </Stack>
         </Paper>

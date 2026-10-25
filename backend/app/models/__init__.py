@@ -219,6 +219,7 @@ class ActFile(TimestampMixin, Base):
     size_bytes: Mapped[int] = mapped_column(Integer)
     lat: Mapped[float | None] = mapped_column(Float)
     lng: Mapped[float | None] = mapped_column(Float)
+    accuracy_m: Mapped[int | None] = mapped_column(Integer)  # rasm olingan paytdagi GPS aniqligi (planshet)
     uploaded_by_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
 

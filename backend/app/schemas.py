@@ -36,6 +36,16 @@ class UserOut(ORM):
     must_change_password: bool = False
 
 
+class LoginOut(UserOut):
+    """Tab sessiya rejimida tokenlar javob tanasida qaytadi (cookie yozilmaydi)."""
+    access_token: str | None = None
+    refresh_token: str | None = None
+
+
+class RefreshIn(BaseModel):
+    refresh_token: str | None = None
+
+
 class ChangePasswordIn(BaseModel):
     current_password: str = Field(min_length=1, max_length=128)
     new_password: str = Field(min_length=1, max_length=128)
@@ -250,6 +260,9 @@ class FileOut(ORM):
     id: int
     kind: FileKind
     size_bytes: int
+    lat: float | None = None
+    lng: float | None = None
+    accuracy_m: int | None = None
 
 
 class AssignIn(BaseModel):
