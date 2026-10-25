@@ -1,4 +1,6 @@
 import { api } from "./client";
+import { clearTokens, saveTokens, type Tokens } from "@/lib/session";
+import { closeSocket } from "@/lib/socket";
 import type { AdminUser, AdminVehicle, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
   GpsDriver, ImportBatch, ImportResult, LocationStatus, Region, Role, Shift, SituationEvent, SituationLevel, User, Vehicle } from "@/types";
 
@@ -11,9 +13,13 @@ export const gpsApi = {
 };
 
 export const authApi = {
-  login: (username: string, password: string) => api.post<User>("/auth/login", { username, password }).then((r) => r.data),
+  login: (username: string, password: string) => api.post<User & Partial<Tokens>>("/auth/login", { username, password }).then((r) => {
+    saveTokens(r.data);
+    const { access_token: _a, refresh_token: _r, ...user } = r.data;
+    return user as User;
+  }),
   me: () => api.get<User>("/auth/me").then((r) => r.data),
-  logout: () => api.post("/auth/logout"),
+  logout: () => api.post("/auth/logout").finally(() => { clearTokens(); closeSocket(); }),
   changePassword: (current_password: string, new_password: string) =>
     api.post<User>("/auth/change-password", { current_password, new_password }).then((r) => r.data),
 };
@@ -57,6 +63,7 @@ export const driverApi = {
     if (coords) {
       fd.append("lat", String(coords.lat));
       fd.append("lng", String(coords.lng));
+      if (coords.accuracy != null) fd.append("accuracy", String(coords.accuracy));
     }
     return api.post(`/driver/requests/${id}/files`, fd).then((r) => r.data);
   },

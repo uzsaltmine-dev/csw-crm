@@ -99,3 +99,20 @@ async def test_driver_cannot_touch_foreign_request(world, client_factory):
     await open_and_start_shift(gps, other, world["users"]["driver2"], world["vehicles"]["v2"])
     r = await other.post(f"/api/v1/driver/requests/{rid}/enroute")
     assert r.status_code == 404 and r.json()["error"]["code"] == "request_not_found"
+
+
+async def test_after_photo_keeps_location_and_accuracy(world, client_factory, sessionmaker):
+    from sqlalchemy import select
+
+    from app.models import ActFile
+    from app.models.enums import FileKind
+    gps, driver = await _ready(world, client_factory)
+    rid = world["requests"][0]
+    await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"driver_id": world["users"]["driver"]})
+    await driver.post(f"/api/v1/driver/requests/{rid}/enroute")
+    assert (await upload(driver, rid, "before", NEAR)).status_code == 200
+    r = await upload(driver, rid, "after", {**NEAR, "accuracy": 7.6})
+    assert r.status_code == 200 and r.json()["accuracy_m"] == 8 and r.json()["lat"] == NEAR["lat"]
+    async with sessionmaker() as s:
+        row = (await s.execute(select(ActFile).where(ActFile.request_id == rid, ActFile.kind == FileKind.after))).scalar_one()
+        assert (row.lat, row.lng, row.accuracy_m) == (NEAR["lat"], NEAR["lng"], 8)

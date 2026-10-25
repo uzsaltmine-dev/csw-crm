@@ -51,6 +51,8 @@ Har push'da avtomatik qayta deploy bo'ladi; har qayta ishga tushishda baza boshl
 
 Demo loginlar (parol `demo1234`): GPS xodimi `gps4`, haydovchi `driver41` (ikkalasi Asaka tumani), `admin`, `manager`, yurist `legal`.
 Tavsiya: GPS xodimini kompyuterda, haydovchini telefon/planshetda oching.
+Demo serverda (`TAB_SESSIONS=true`) bitta brauzerning har tabida boshqa rolda kirish mumkin; tab sarlavhasida rol va ism turadi.
+Yangi tab ochib manzilni qo'lda kiriting (tabni "Dublikat" qilsangiz, sessiya ham nusxalanadi). Prod'da bu rejim o'chiq — httpOnly cookie.
 
 Bepul reja cheklovlari: 15 daqiqa kirilmasa uxlaydi, keyingi ochilish ~1 daqiqa.
 Namuna korxonalar Asakada joylashgan — boshqa joydan yakunlangan ariza haqli ravishda `Shubhali` (radiusdan tashqarida) bo'ladi.

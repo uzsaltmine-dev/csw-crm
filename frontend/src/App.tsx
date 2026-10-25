@@ -3,6 +3,7 @@ import { Alert, Box, CircularProgress } from "@mui/material";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { DriverLayout } from "@/components/DriverLayout";
 import { useI18n } from "@/i18n/I18nContext";
+import type { MessageKey } from "@/i18n/messages";
 import { closeSocket, getSocket } from "@/lib/socket";
 import { LoginPage } from "@/pages/LoginPage";
 import { ActPage } from "@/pages/driver/ActPage";
@@ -58,7 +59,11 @@ export function App() {
     window.addEventListener("csw:logout", onLogout);
     return () => window.removeEventListener("csw:logout", onLogout);
   }, [dispatch]);
-  useEffect(() => { document.title = t("app_name"); }, [t]);
+  // Tab sarlavhasi: qaysi rolda va kim bo'lib kirilgani — bir nechta tabda turli rollarni ajratish uchun
+  const me = useAppSelector((st) => st.auth.user);
+  useEffect(() => {
+    document.title = me ? `${t(`r_${me.role}` as MessageKey)} · ${me.full_name} — CSW` : `${t("login_title")} — CSW`;
+  }, [t, me]);
 
   return (
     <BrowserRouter>

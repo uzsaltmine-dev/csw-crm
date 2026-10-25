@@ -1,0 +1,36 @@
+/**
+ * Sessiya rejimi.
+ * - Oddiy (prod): tokenlar httpOnly cookie'da — brauzerning barcha tablari bitta foydalanuvchi.
+ * - Tab rejimi (demo/sinov, backend TAB_SESSIONS=true): tokenlar shu tabning sessionStorage'ida va
+ *   `Authorization: Bearer` bilan yuboriladi — har tabda boshqa rolda kirish mumkin.
+ */
+const KEY = "csw:tab-tokens";
+let tabMode = false;
+let demo = false;
+
+export interface Tokens { access_token: string; refresh_token: string }
+
+export async function detectSessionMode(): Promise<void> {
+  try {
+    const r = await fetch("/api/v1/auth/config", { credentials: "include" });
+    if (r.ok) { const c = await r.json(); tabMode = !!c.tab_sessions; demo = !!c.demo; }
+  } catch { tabMode = false; }
+}
+
+export const isTabMode = () => tabMode;
+/** Demo server: login sahifasida demo hisoblar ko'rsatiladi. */
+export const isDemo = () => demo;
+
+export function getTokens(): Tokens | null {
+  if (!tabMode) return null;
+  try { const raw = sessionStorage.getItem(KEY); return raw ? JSON.parse(raw) as Tokens : null; } catch { return null; }
+}
+
+export function saveTokens(data: Partial<Tokens> | null | undefined): void {
+  if (!tabMode || !data?.access_token || !data.refresh_token) return;
+  try { sessionStorage.setItem(KEY, JSON.stringify({ access_token: data.access_token, refresh_token: data.refresh_token })); } catch { /* yopiq xotira */ }
+}
+
+export function clearTokens(): void {
+  try { sessionStorage.removeItem(KEY); } catch { /* yopiq xotira */ }
+}

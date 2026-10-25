@@ -54,10 +54,11 @@ async def enroute(request_id: int, user: User = Driver, db: AsyncSession = DB):
 
 @router.post("/requests/{request_id}/files", response_model=FileOut)
 async def upload(request_id: int, kind: FileKind = Form(...), file: UploadFile = File(...),
-                 lat: float | None = Form(None), lng: float | None = Form(None),
+                 lat: float | None = Form(None), lng: float | None = Form(None), accuracy: float | None = Form(None, ge=0),
                  user: User = Driver, db: AsyncSession = DB, storage: Storage = Depends(get_storage)):
     image = await read_image(file)
-    return await driver_service.upload_file(db, storage, user, request_id, kind, image, lat, lng)
+    return await driver_service.upload_file(db, storage, user, request_id, kind, image, lat, lng,
+                                            round(accuracy) if accuracy is not None else None)
 
 
 @router.post("/location", status_code=204)

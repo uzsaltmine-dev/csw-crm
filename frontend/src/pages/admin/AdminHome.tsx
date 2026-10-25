@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Badge, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Alert, Box, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSituation } from "@/components/Situation";
 import { adminApi } from "@/api/endpoints";
@@ -49,7 +49,7 @@ export function AdminHome() {
       <Paper variant="outlined">
         <Tabs value={tab} onChange={(_, v: TabId) => pick(v)} variant="scrollable" allowScrollButtonsMobile>
           {tabs.map((x) => <Tab key={x} value={x} label={x === "situation" && situation?.unread
-            ? <Badge color="error" badgeContent={situation.unread} max={99} sx={{ "& .MuiBadge-badge": { right: -12 } }}>{t("tab_situation")}</Badge>
+            ? <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>{t("tab_situation")}<CountPill n={situation.unread} /></Box>
             : t(`tab_${x}`)} />)}
         </Tabs>
       </Paper>
@@ -61,6 +61,12 @@ export function AdminHome() {
       {tab === "settings" && <SettingsTab {...ref} />}
     </Stack>
   );
+}
+
+/** Yorliq ichidagi son: absolute badge emas — yorliq chegarasidan chiqmaydi va kesilmaydi. */
+export function CountPill({ n }: { n: number }) {
+  return <Box component="span" data-testid="count-pill" sx={{ minWidth: 20, height: 20, px: 0.75, borderRadius: 10, bgcolor: "error.main", color: "error.contrastText",
+    fontSize: 12, fontWeight: 600, lineHeight: "20px", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{n > 99 ? "99+" : n}</Box>;
 }
 
 export function districtLabel(districts: District[], id: number | null | undefined): string {
