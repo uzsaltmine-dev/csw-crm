@@ -45,3 +45,12 @@ def require_roles(*roles: Role) -> Callable:
             raise forbidden()
         return user
     return checker
+
+
+def require_perm(*codes: str) -> Callable:
+    """Ruxsat tekshiruvi: xodimda kodlardan kamida bittasi bo'lishi kerak (admin — hammasi)."""
+    async def checker(user: User = Depends(current_user)) -> User:
+        if not any(user.can(c) for c in codes):
+            raise forbidden("Bu amal uchun ruxsat yo'q")
+        return user
+    return checker

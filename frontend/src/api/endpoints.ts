@@ -1,7 +1,7 @@
 import { api } from "./client";
 import { clearTokens, saveTokens, type Tokens } from "@/lib/session";
 import { closeSocket } from "@/lib/socket";
-import type { AdminUser, AdminVehicle, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
+import type { Access, AdminUser, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
   GpsDriver, ImportBatch, ImportResult, LocationStatus, Region, Role, Shift, SituationEvent, SituationLevel, User, Vehicle } from "@/types";
 
 export const gpsApi = {
@@ -24,8 +24,10 @@ export const authApi = {
     api.post<User>("/auth/change-password", { current_password, new_password }).then((r) => r.data),
 };
 
-export type UserCreate = { username: string; full_name: string; phone?: string | null; role: Role; district_id?: number | null; language?: string; password: string };
-export type UserPatch = Partial<Pick<AdminUser, "full_name" | "phone" | "role" | "district_id" | "language" | "is_active">>;
+export type UserCreate = { username: string; full_name: string; phone?: string | null; role: Role; district_id?: number | null;
+  district_ids?: number[]; language?: string; password: string };
+export type UserPatch = Partial<Pick<AdminUser, "full_name" | "phone" | "role" | "district_id" | "district_ids" | "language" | "is_active">>;
+type Settings = { gps_radius_m: number; districts: DistrictRadius[] };
 
 export const adminApi = {
   users: () => api.get<AdminUser[]>("/admin/users").then((r) => r.data),
@@ -39,8 +41,15 @@ export const adminApi = {
   vehicles: () => api.get<AdminVehicle[]>("/admin/vehicles").then((r) => r.data),
   createVehicle: (body: { plate: string; model?: string | null; district_id: number }) => api.post<AdminVehicle>("/admin/vehicles", body).then((r) => r.data),
   updateVehicle: (id: number, body: Partial<Omit<AdminVehicle, "id">>) => api.patch<AdminVehicle>(`/admin/vehicles/${id}`, body).then((r) => r.data),
-  settings: () => api.get<{ gps_radius_m: number }>("/admin/settings").then((r) => r.data),
-  saveSettings: (gps_radius_m: number) => api.put<{ gps_radius_m: number }>("/admin/settings", { gps_radius_m }).then((r) => r.data),
+  settings: () => api.get<Settings>("/admin/settings").then((r) => r.data),
+  saveSettings: (gps_radius_m: number) => api.put<Settings>("/admin/settings", { gps_radius_m }).then((r) => r.data),
+  saveDistrictRadius: (id: number, gps_radius_m: number | null) => api.put<Settings>(`/admin/districts/${id}/radius`, { gps_radius_m }).then((r) => r.data),
+  approveUser: (id: number) => api.post<AdminUser>(`/admin/users/${id}/approve`).then((r) => r.data),
+  rejectUser: (id: number) => api.post<AdminUser>(`/admin/users/${id}/reject`).then((r) => r.data),
+  permissionCatalog: () => api.get<{ modules: Record<string, string[]> }>("/admin/permissions/catalog").then((r) => r.data),
+  access: (id: number) => api.get<Access>(`/admin/users/${id}/access`).then((r) => r.data),
+  saveAccess: (id: number, body: { permissions: string[]; district_ids?: number[] }) =>
+    api.put<Access>(`/admin/users/${id}/access`, body).then((r) => r.data),
 };
 
 export const driverApi = {

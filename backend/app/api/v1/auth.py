@@ -7,7 +7,7 @@ from app.core.errors import AppError
 from app.core.security import ACCESS, REFRESH, create_token, decode_token
 from app.models import User
 from app.repositories import users as users_repo
-from app.schemas import ChangePasswordIn, LoginIn, LoginOut, RefreshIn, UserOut
+from app.schemas import ChangePasswordIn, LoginIn, LoginOut, MeOut, RefreshIn
 from app.services import auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -67,11 +67,11 @@ async def logout(response: Response):
     response.delete_cookie("refresh_token", path=REFRESH_PATH)
 
 
-@router.post("/change-password", response_model=UserOut)
+@router.post("/change-password", response_model=MeOut)
 async def change_password(body: ChangePasswordIn, user: User = Depends(current_user), db: AsyncSession = DB):
     return await auth_service.change_password(db, user, body.current_password, body.new_password)
 
 
-@router.get("/me", response_model=UserOut)
+@router.get("/me", response_model=MeOut)
 async def me(user: User = Depends(current_user)):
     return user

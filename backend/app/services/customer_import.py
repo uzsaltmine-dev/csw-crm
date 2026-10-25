@@ -92,7 +92,7 @@ async def _district_index(db: AsyncSession) -> dict[tuple[str, str, bool], int]:
     return {(place_key(r.name), place_key(d.name), is_city(d.name)): d.id for d, r in rows}
 
 
-async def build_plan(db: AsyncSession, content: bytes) -> Plan:
+async def build_plan(db: AsyncSession, content: bytes, allowed: set[int] | None = None) -> Plan:
     try:
         wb = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
     except Exception:  # noqa: BLE001 — har qanday buzilgan fayl
@@ -120,6 +120,9 @@ async def build_plan(db: AsyncSession, content: bytes) -> Plan:
             district_id = districts.get((place_key(region), place_key(district), is_city(district)))
             if not district_id:
                 plan.errors.append(RowError(n, f"Tuman topilmadi: «{region} — {district}»"))
+                continue
+            if allowed is not None and district_id not in allowed:
+                plan.errors.append(RowError(n, f"Tuman sizning doirangizda emas: «{region} — {district}»"))
                 continue
             plan.rows_ok += 1
             if SEPTIC.search(key(_cell(row, header.get("info")))):
@@ -171,7 +174,8 @@ async def next_fixed_no_start(db: AsyncSession) -> int:
 
 
 async def run(db: AsyncSession, user: User, file_name: str, content: bytes, dry_run: bool) -> ImportResult:
-    plan = await build_plan(db, content)
+    from app.services.access import scope
+    plan = await build_plan(db, content, scope(user))
     existing = {(c.district_id, c.name_key): c for c in (await db.execute(
         select(Customer).options(selectinload(Customer.contacts)))).scalars()}
     stirs = {s for (s,) in (await db.execute(select(Customer.stir).where(Customer.stir.is_not(None)))).all()}

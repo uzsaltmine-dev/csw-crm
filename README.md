@@ -110,3 +110,12 @@ API'ni Postman bilan sinash: `Authorization: Bearer <token>` sarlavhasi bilan CS
 - Tashqi Nginx: SSL (Let's Encrypt) va `proxy_pass http://127.0.0.1:8080`; `.env` da `COOKIE_SECURE=true`.
 - UFW: faqat 22, 80, 443 ochiq; MySQL, MinIO va API portlari `127.0.0.1` ga bog'langan.
 - Planshetda GPS va kamera faqat **HTTPS** orqali ishlaydi.
+
+## Huquqlar (PR #7)
+
+- Ruxsat kodi `<bo'lim>.<amal>`: `customers.*`, `staff.*`, `vehicles.*`, `settings.*` (katalog: `backend/app/core/permissions.py`).
+  Admin hammasiga ega; boshqa xodimga yaratilganda rol andozasi yoziladi, keyin "Xodimlar → Huquqlar" oynasida ochiladi/yopiladi.
+- Doira: GPS/haydovchi — bitta tuman; manager/yurist/operator — bir nechta tuman. Manager faqat o'z tumanlaridagi
+  GPS/yurist/operator/haydovchilarni ko'radi va boshqaradi; faqat o'zida bor ruxsatlarni bera oladi.
+- Manager qo'shgan xodim admin tasdiqlamaguncha kira olmaydi ("Vaziyat" yoki "Xodimlar"da "Tasdiqlash").
+- GPS radiusi tuman bo'yicha (bo'sh bo'lsa umumiy). Vaziyat paneli — faqat admin; managerning har o'zgarishi u yerga yoziladi.

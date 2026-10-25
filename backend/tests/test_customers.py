@@ -78,7 +78,8 @@ async def test_search_filters_and_district_scope(world, client_factory):
     assert (await admin.get("/api/v1/customers", params={"q": "90 555 11 22"})).json()["total"] == 1
     assert (await admin.get("/api/v1/customers", params={"q": "305123456"})).json()["total"] == 1
     # GPS xodimi (Asaka) Termiz korxonalarini ko'rmaydi
-    page = (await gps.get("/api/v1/customers", params={"district_id": world["districts"]["b"]})).json()
+    assert (await gps.get("/api/v1/customers", params={"district_id": world["districts"]["b"]})).json()["total"] == 0
+    page = (await gps.get("/api/v1/customers")).json()
     assert page["total"] == 3 and all(i["district_id"] == world["districts"]["a"] for i in page["items"])
     termiz = (await admin.get("/api/v1/customers", params={"district_id": world["districts"]["b"]})).json()["items"][0]
     assert (await gps.get(f"/api/v1/customers/{termiz['id']}")).status_code == 403

@@ -12,7 +12,7 @@ export function DriverLayout({ children, wide = false }: { children: ReactNode; 
   const user = useAppSelector((s) => s.auth.user);
   const plate = useAppSelector((s) => s.driver.shift?.vehicle.plate);
   const dispatch = useAppDispatch();
-  const watcher = user?.role === "admin" || user?.role === "manager";
+  const watcher = user?.role === "admin"; // Vaziyat paneli — faqat admin
   const page = (
     <Box sx={{ minHeight: "100%", bgcolor: "background.default" }}>
       <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: "divider" }}>

@@ -5,7 +5,7 @@ import { customersApi, type ContractCreate } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
 import { useI18n } from "@/i18n/I18nContext";
 import { toast } from "@/lib/alerts";
-import { useAppSelector } from "@/store";
+import { useCan } from "@/hooks/useCan";
 import type { ContractType, CustomerDetail, District } from "@/types";
 import { LocationChip, MissingChips } from "./CustomersTab";
 
@@ -18,9 +18,10 @@ interface Props { id: number | "new"; districts: District[]; onClose: () => void
 
 export function CustomerDialog({ id, districts, onClose, onChanged }: Props) {
   const { t, tErr } = useI18n();
-  const role = useAppSelector((s) => s.auth.user?.role);
-  const canEdit = role === "admin" || role === "legal";
-  const canConfirm = role === "admin" || role === "manager";
+  const can = useCan();
+  const canEdit = can("customers.edit") || (id === "new" && can("customers.create"));
+  const canContract = can("customers.contract");
+  const canConfirm = can("customers.location_confirm");
   const [cust, setCust] = useState<CustomerDetail | null>(null);
   const [card, setCard] = useState<Card>({ name: "", district_id: "", stir: "", director: "", phone: "", address: "", activity_type: "" });
   const [contact, setContact] = useState({ name: "", phone: "" });
@@ -100,7 +101,7 @@ export function CustomerDialog({ id, districts, onClose, onChanged }: Props) {
             <Box>
               <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
                 <Typography variant="subtitle1" fontWeight={600}>{t("contracts")}</Typography>
-                {canEdit && !contract && <Button sx={{ ml: "auto" }} onClick={() => setContract({ number: "", type: "monthly", signed_on: today(), price: null,
+                {canContract && !contract && <Button sx={{ ml: "auto" }} onClick={() => setContract({ number: "", type: "monthly", signed_on: today(), price: null,
                   valid_from: today(), valid_to: `${new Date().getFullYear()}-12-31` })}>{t("add_contract")}</Button>}
               </Stack>
               {cust.contracts.length ? <Table size="small">

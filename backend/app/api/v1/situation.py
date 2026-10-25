@@ -1,4 +1,4 @@
-"""Vaziyat paneli: admin va manager uchun hodisalar jurnali (90 kun)."""
+"""Vaziyat paneli: faqat admin uchun hodisalar jurnali (90 kun)."""
 import json
 from datetime import date, datetime, time, timedelta
 
@@ -12,7 +12,7 @@ from app.models.enums import Role, SituationLevel
 from app.schemas import SituationOut, SituationPage, SituationReadIn
 
 router = APIRouter(prefix="/situation", tags=["situation"])
-Viewer = Depends(require_roles(Role.admin, Role.manager))
+Viewer = Depends(require_roles(Role.admin))
 
 
 async def _last_read(db: AsyncSession, user_id: int) -> int:
@@ -45,9 +45,13 @@ async def events(level: SituationLevel | None = None, kind: str | None = Query(N
     total = (await db.execute(select(func.count()).select_from(SituationEvent).where(*cond))).scalar_one()
     rows = (await db.execute(select(SituationEvent, User.full_name).outerjoin(User, User.id == SituationEvent.actor_id)
                              .where(*cond).order_by(SituationEvent.id.desc()).limit(limit).offset(offset))).all()
+    pending_refs = [e.ref_id for e, _ in rows if e.kind == "staff_pending" and e.ref_id]
+    still_pending = set((await db.execute(select(User.id).where(User.id.in_(pending_refs), User.approval_status == "pending"))).scalars()) \
+        if pending_refs else set()
     items = [SituationOut(id=e.id, level=e.level.value, kind=e.kind, message=e.message, params=json.loads(e.params) if e.params else {},
                           district_id=e.district_id, actor_id=e.actor_id, actor_name=name, ref_type=e.ref_type, ref_id=e.ref_id,
-                          created_at=e.created_at) for e, name in rows]
+                          created_at=e.created_at, resolved=e.kind == "staff_pending" and e.ref_id not in still_pending)
+             for e, name in rows]
     return SituationPage(items=items, total=total, unread=await _unread(db, last), last_read_id=last)
 
 

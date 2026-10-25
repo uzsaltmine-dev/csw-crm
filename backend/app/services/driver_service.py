@@ -135,7 +135,7 @@ async def complete(db: AsyncSession, driver: User, request_id: int, data: Comple
     if missing:
         raise invalid("act_incomplete", "Dalolatnoma to'liq emas: " + ", ".join(missing))
 
-    radius = await settings_repo.gps_radius(db)
+    radius = await settings_repo.radius_for_district(db, req.district_id)
     cust = req.customer
     note = None
     first_visit = False

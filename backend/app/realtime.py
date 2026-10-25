@@ -28,6 +28,8 @@ async def connect(sid, environ, auth):
     role, uid = data["role"], data["sub"]
     if role in ("admin", "manager"):
         await sio.enter_room(sid, "managers")
+    if role == "admin":
+        await sio.enter_room(sid, "admins")  # Vaziyat paneli
     elif role == "gps":
         district = (auth or {}).get("district_id")
         await sio.enter_room(sid, f"gps:{district}" if district else "gps:all")
@@ -48,5 +50,5 @@ async def emit_driver_location(payload: dict) -> None:
 
 
 async def emit_situation(payload: dict) -> None:
-    """Vaziyat paneli: faqat admin va manager."""
-    await sio.emit("situation:new", payload, room="managers")
+    """Vaziyat paneli: faqat admin."""
+    await sio.emit("situation:new", payload, room="admins")

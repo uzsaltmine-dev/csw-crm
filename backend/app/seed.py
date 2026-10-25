@@ -9,9 +9,10 @@ from datetime import date, timedelta
 
 from sqlalchemy import select
 
+from app.core.permissions import apply_template
 from app.core.security import hash_password
 from app.db.session import SessionLocal
-from app.models import AppSetting, Contract, Customer, District, Provider, Region, Request, User, Vehicle
+from app.models import AppSetting, Contract, Customer, District, Provider, Region, Request, User, UserDistrict, Vehicle
 from app.models.enums import ContractType, LocationStatus, Role, WasteType
 
 REGIONS = {
@@ -37,8 +38,13 @@ async def seed() -> None:
             return
         db.add(AppSetting(key="gps_radius_m", value="300"))
         db.add(User(username="admin", password_hash=pwd, full_name="Administrator", role=Role.admin))
-        db.add(User(username="manager", password_hash=pwd, full_name="Manager", role=Role.manager))
-        db.add(User(username="legal", password_hash=pwd, full_name="Yuridik bo'lim xodimi", role=Role.legal))
+        # Manager va yurist — barcha 12 tuman (pastda biriktiriladi)
+        manager = User(username="manager", password_hash=pwd, full_name="Manager", role=Role.manager)
+        legal = User(username="legal", password_hash=pwd, full_name="Yuridik bo'lim xodimi", role=Role.legal)
+        apply_template(manager)
+        apply_template(legal)
+        db.add_all([manager, legal])
+        district_ids: list[int] = []
         n = 0
         for region_name, (prov_name, code, plate_code, districts) in REGIONS.items():
             region = Region(name=region_name)
@@ -50,7 +56,10 @@ async def seed() -> None:
                 d = District(name=d_name, region_id=region.id)
                 db.add(d)
                 await db.flush()
-                db.add(User(username=f"gps{n}", password_hash=pwd, full_name=f"GPS xodimi — {d_name}", role=Role.gps, district_id=d.id))
+                district_ids.append(d.id)
+                gps = User(username=f"gps{n}", password_hash=pwd, full_name=f"GPS xodimi — {d_name}", role=Role.gps, district_id=d.id)
+                apply_template(gps)
+                db.add(gps)
                 for k in (1, 2):
                     db.add(Vehicle(plate=f"{plate_code} {n:02d}{k} {code[:2]}", model="ISUZU NQR", district_id=d.id))
                     db.add(User(username=f"driver{n}{k}", password_hash=pwd, full_name=f"Haydovchi {n}-{k}",
@@ -83,6 +92,7 @@ async def seed() -> None:
                 db.add(r)
                 await db.flush()
                 r.number = f"AR-{r.id:06d}"
+        db.add_all([UserDistrict(user_id=u.id, district_id=d) for u in (manager, legal) for d in district_ids])
         await db.commit()
         print("Seed tayyor: admin, manager, legal, gps1..gps12, driver11..driver122")
 

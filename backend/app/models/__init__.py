@@ -36,7 +36,24 @@ class District(Base):
     name: Mapped[str] = mapped_column(String(100))
     region_id: Mapped[int] = mapped_column(ForeignKey("regions.id"), index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Tuman GPS radiusi (100–300 m); bo'sh bo'lsa umumiy sozlama ishlaydi
+    gps_radius_m: Mapped[int | None] = mapped_column(Integer)
     region: Mapped[Region] = relationship()
+
+
+class UserDistrict(Base):
+    """Manager, yurist va operator uchun tumanlar doirasi (bir nechta bo'lishi mumkin)."""
+    __tablename__ = "user_districts"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    district_id: Mapped[int] = mapped_column(ForeignKey("districts.id"), primary_key=True)
+
+
+class UserPermission(TimestampMixin, Base):
+    """Xodimga berilgan ruxsat (masalan, "customers.edit"). Admin uchun yozilmaydi — admin hammasiga ega."""
+    __tablename__ = "user_permissions"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    code: Mapped[str] = mapped_column(String(40), primary_key=True)
+    granted_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
 
 
 class User(TimestampMixin, Base):
@@ -55,7 +72,30 @@ class User(TimestampMixin, Base):
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     failed_logins: Mapped[int] = mapped_column(Integer, default=0)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime)
+    # Manager yaratgan xodim admin tasdiqlamaguncha "pending" (kira olmaydi)
+    approval_status: Mapped[str] = mapped_column(String(10), default="approved", server_default="approved")
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     district: Mapped[District | None] = relationship()
+    # Xodimlar soni kichik (~20) — ruxsat va doira har doim birga yuklanadi
+    perm_rows: Mapped[list[UserPermission]] = relationship(lazy="selectin", cascade="all, delete-orphan",
+                                                           foreign_keys=[UserPermission.user_id])
+    district_rows: Mapped[list[UserDistrict]] = relationship(lazy="selectin", cascade="all, delete-orphan")
+
+    @property
+    def permissions(self) -> list[str]:
+        from app.core.permissions import ALL_CODES
+        return sorted(ALL_CODES) if self.role == Role.admin else sorted(p.code for p in self.perm_rows)
+
+    @property
+    def district_ids(self) -> list[int]:
+        """Ishlash doirasi: GPS/haydovchi — bitta tuman; manager/yurist/operator — biriktirilgan tumanlar."""
+        ids = {d.district_id for d in self.district_rows}
+        if self.district_id:
+            ids.add(self.district_id)
+        return sorted(ids)
+
+    def can(self, code: str) -> bool:
+        return self.role == Role.admin or any(p.code == code for p in self.perm_rows)
 
 
 class Vehicle(Base):
@@ -262,4 +302,5 @@ class SituationRead(Base):
 __all__ = [
     "Base", "Region", "Provider", "District", "User", "Vehicle", "Shift", "Customer", "CustomerContact", "ImportBatch", "Contract",
     "Request", "NaryadCounter", "Act", "ActFile", "RequestEvent", "AppSetting", "SituationEvent", "SituationRead",
+    "UserDistrict", "UserPermission",
 ]

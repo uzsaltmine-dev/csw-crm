@@ -6,7 +6,7 @@ import ErrorIcon from "@mui/icons-material/ErrorOutline";
 import InfoIcon from "@mui/icons-material/InfoOutlined";
 import WarningIcon from "@mui/icons-material/WarningAmber";
 import CheckIcon from "@mui/icons-material/CheckCircleOutline";
-import { situationApi } from "@/api/endpoints";
+import { adminApi, situationApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
 import { SITUATION_EVENT, useSituation, useSituationText } from "@/components/Situation";
 import { useI18n } from "@/i18n/I18nContext";
@@ -18,7 +18,8 @@ import { districtLabel, type RefData } from "./AdminHome";
 
 export const SITUATION_KINDS = ["account_locked", "act_suspect", "request_failed", "location_pending", "import_done", "user_created",
   "user_deactivated", "user_activated", "password_reset", "district_deactivated", "district_activated", "vehicle_deactivated",
-  "vehicle_activated", "settings_changed"] as const;
+  "vehicle_activated", "settings_changed", "staff_pending", "staff_approved", "staff_rejected", "staff_updated", "access_changed",
+  "vehicle_created", "vehicle_updated", "customer_created", "customer_updated", "district_radius_changed"] as const;
 
 const LEVEL_ICON = {
   info: <InfoIcon color="info" fontSize="small" />, warning: <WarningIcon color="warning" fontSize="small" />,
@@ -67,6 +68,12 @@ export function SituationTab({ districts }: RefData) {
     window.addEventListener(SITUATION_EVENT, onNew);
     return () => window.removeEventListener(SITUATION_EVENT, onNew);
   }, [load]);
+
+  // Manager qo'shgan xodim: admin shu yerdan tasdiqlaydi yoki rad etadi
+  const decide = async (userId: number, approve: boolean) => {
+    try { await (approve ? adminApi.approveUser(userId) : adminApi.rejectUser(userId)); toast(t("saved")); load(); }
+    catch (e) { toast(tErr(errorCode(e), errorMessage(e)), "error"); }
+  };
 
   const markAll = async () => {
     try { const r = await situationApi.markRead(); ctx?.setUnread(r.unread); setLastRead(r.last_read_id); if (onlyUnread) load(); }
@@ -121,6 +128,10 @@ export function SituationTab({ districts }: RefData) {
                     <TableCell>
                       <Typography variant="body2" fontWeight={isNew ? 600 : 400}>{text(ev)}</Typography>
                       <Typography variant="caption" color="text.secondary">{t(`k_${ev.kind}` as MessageKey)}</Typography>
+                      {ev.kind === "staff_pending" && ev.ref_id && !ev.resolved && <Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
+                        <Button size="small" variant="contained" disableElevation onClick={() => decide(ev.ref_id!, true)}>{t("approve")}</Button>
+                        <Button size="small" color="error" onClick={() => decide(ev.ref_id!, false)}>{t("reject")}</Button>
+                      </Stack>}
                     </TableCell>
                     <TableCell>{ev.district_id ? districtLabel(districts, ev.district_id) : "—"}</TableCell>
                     <TableCell>{ev.actor_name ?? t("sit_system")}</TableCell>

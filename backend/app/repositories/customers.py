@@ -16,10 +16,12 @@ def _active_contract_exists(today: date):
 
 
 async def search(db: AsyncSession, *, district_id: int | None, q: str | None, incomplete: bool, location: LocationStatus | None,
-                 limit: int, offset: int) -> tuple[list[Customer], int, dict[int, int]]:
+                 limit: int, offset: int, scope: set[int] | None = None) -> tuple[list[Customer], int, dict[int, int]]:
     cond = []
     if district_id:
         cond.append(Customer.district_id == district_id)
+    if scope is not None:  # admin emas — faqat o'z tumanlari
+        cond.append(Customer.district_id.in_(scope or {-1}))
     if q and q.strip():
         text = q.strip()
         digits = phone_digits(text)
