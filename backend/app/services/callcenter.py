@@ -3,7 +3,7 @@
 Ariza ochilishi bilan tumanning GPS xodimi ro'yxatiga jonli tushadi (request:updated). Korxona bazada bo'lmasa operator
 "birinchi murojaat" yuboradi — yuridik bo'lim korxona kartasini (va shartnomani) yaratadi, ariza avtomatik ochiladi.
 """
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,7 @@ from app import realtime
 from app.core.errors import conflict, invalid, not_found
 from app.db.base import utcnow
 from app.models import Appeal, Customer, District, Request, User
-from app.models.enums import OPEN_STATUSES, AppealStatus, RequestStatus, SituationLevel
+from app.models.enums import OPEN_STATUSES, AppealStatus, RequestStatus, SituationLevel, WasteType
 from app.repositories import customers as customers_repo
 from app.repositories import requests as req_repo
 from app.schemas import AppealAcceptIn, AppealIn, ContractIn, RequestCreateIn
@@ -83,8 +83,18 @@ async def cancel_request(db: AsyncSession, actor: User, request_id: int, reason:
 
 
 async def list_requests(db: AsyncSession, actor: User, *, district_id: int | None, status: RequestStatus | None, mine: bool,
-                        overdue: bool, q: str | None, limit: int, offset: int) -> tuple[list[Request], int]:
+                        overdue: bool, q: str | None, limit: int, offset: int, date_from: datetime | None = None,
+                        date_to: datetime | None = None, waste_type: WasteType | None = None,
+                        repeat: bool = False) -> tuple[list[Request], int]:
     cond = []
+    if date_from:
+        cond.append(Request.created_at >= date_from)
+    if date_to:
+        cond.append(Request.created_at < date_to)
+    if waste_type:
+        cond.append(Request.waste_type == waste_type)
+    if repeat:
+        cond.append(Request.is_repeat.is_(True))
     s = access.scope(actor)
     if s is not None:
         cond.append(Request.district_id.in_(s or {-1}))
@@ -199,3 +209,17 @@ async def reject_appeal(db: AsyncSession, actor: User, appeal_id: int, reason: s
     await db.commit()
     await _appeal_broadcast(a)
     return a
+
+
+async def request_detail(db: AsyncSession, actor: User, request_id: int) -> dict:
+    """Ariza kartasi: korxona, haydovchi, kim ochgan va holatlar tarixi."""
+    from app.models import RequestEvent
+    req = await req_repo.by_id(db, request_id)
+    if not req:
+        raise not_found("request")
+    access.check_scope(actor, req.district_id)
+    names = {u.id: u.full_name for u in (await db.execute(select(User))).scalars()}
+    events = (await db.execute(select(RequestEvent).where(RequestEvent.request_id == req.id).order_by(RequestEvent.id))).scalars()
+    await req_repo.mark_seen(db, actor.id, [req.id])
+    return {"req": req, "driver_name": names.get(req.driver_id), "created_by_name": names.get(req.created_by_id),
+            "events": [{"status": e.status, "note": e.note, "actor_name": names.get(e.actor_id), "created_at": e.created_at} for e in events]}

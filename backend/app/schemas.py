@@ -253,6 +253,7 @@ class RequestOut(ORM):
     due_at: datetime | None = None
     overdue: bool = False
     is_repeat: bool = False
+    seen: bool | None = None  # joriy xodim ko'rganmi ("Yangi" belgisi); None — hisoblanmagan
 
 
 class DriverTaskOut(RequestOut):
@@ -455,6 +456,23 @@ class RequestListOut(RequestOut):
     created_by_id: int | None = None
     finished_at: datetime | None = None
     cancel_reason: str | None = None
+
+
+class RequestEventOut(BaseModel):
+    status: RequestStatus
+    note: str | None
+    actor_name: str | None
+    created_at: datetime
+
+
+class RequestDetailOut(RequestListOut):
+    driver_name: str | None = None
+    created_by_name: str | None = None
+    events: list[RequestEventOut] = []
+
+
+class SeenIn(BaseModel):
+    request_ids: list[int] = Field(max_length=500)
 
 
 class RequestPage(BaseModel):

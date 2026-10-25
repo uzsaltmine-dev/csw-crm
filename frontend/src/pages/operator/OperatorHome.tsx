@@ -11,7 +11,7 @@ import type { Appeal, CustomerListItem, District, RequestItem } from "@/types";
 import { EMPTY_ORDER, OrderFields, orderBody, type Order } from "./OrderFields";
 
 /** Status chipi rangi */
-const STATUS_COLOR: Record<string, "default" | "info" | "success" | "warning" | "error"> = {
+export const STATUS_COLOR: Record<string, "default" | "info" | "success" | "warning" | "error"> = {
   new: "info", assigned: "info", enroute: "info", onsite: "info", done: "success", suspect: "warning", failed: "error", cancelled: "default",
 };
 
