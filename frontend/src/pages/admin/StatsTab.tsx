@@ -152,6 +152,28 @@ export function StatsTab(_: RefData) {
       </Box>
       <Typography variant="caption" color="text.secondary">{t("st_click_hint")}</Typography>
 
+      {data && <Paper variant="outlined" sx={{ p: 2 }}>
+        <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>{t("st_all_table")}</Typography>
+        <Box sx={{ overflowX: "auto" }}>
+          <Table size="small" id="st-table">
+            <TableHead><TableRow>
+              <TableCell>{t("district")}</TableCell>
+              {METRICS.map((m) => <TableCell key={m} align="right" sx={{ fontWeight: m === metric ? 700 : 400 }}>{label(m)}</TableCell>)}
+            </TableRow></TableHead>
+            <TableBody>
+              {[...data.districts, { ...data.total, district_id: 0, name: t("st_total") }].map((r) => (
+                <TableRow key={r.district_id} sx={r.district_id === 0 ? { "& td": { fontWeight: 700 } } : undefined}>
+                  <TableCell>{r.name}</TableCell>
+                  {METRICS.map((m) => <TableCell key={m} align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
+                    {r[m]}{SHARE[m] && <Typography component="span" variant="caption" color="text.secondary"> {r[SHARE[m]!]}%</Typography>}
+                  </TableCell>)}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+      </Paper>}
+
       {detail && <Box key={key} sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" } }}>
         <ChartCard id="st-area" title={t("st_area_title", { metric: label(metric) })}
           subtitle={t(detail.granularity === "hour" ? "st_by_hour" : "st_by_day")}
@@ -210,28 +232,6 @@ export function StatsTab(_: RefData) {
           </ResponsiveContainer>}
           table={<SimpleTable head={[t("district"), label(metric)]} rows={districts.map((d) => [d.name, d.value])} />} />
       </Box>}
-
-      {data && <Paper variant="outlined" sx={{ p: 2 }}>
-        <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>{t("st_all_table")}</Typography>
-        <Box sx={{ overflowX: "auto" }}>
-          <Table size="small" id="st-table">
-            <TableHead><TableRow>
-              <TableCell>{t("district")}</TableCell>
-              {METRICS.map((m) => <TableCell key={m} align="right" sx={{ fontWeight: m === metric ? 700 : 400 }}>{label(m)}</TableCell>)}
-            </TableRow></TableHead>
-            <TableBody>
-              {[...data.districts, { ...data.total, district_id: 0, name: t("st_total") }].map((r) => (
-                <TableRow key={r.district_id} sx={r.district_id === 0 ? { "& td": { fontWeight: 700 } } : undefined}>
-                  <TableCell>{r.name}</TableCell>
-                  {METRICS.map((m) => <TableCell key={m} align="right" sx={{ fontVariantNumeric: "tabular-nums" }}>
-                    {r[m]}{SHARE[m] && <Typography component="span" variant="caption" color="text.secondary"> {r[SHARE[m]!]}%</Typography>}
-                  </TableCell>)}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Box>
-      </Paper>}
     </Stack>
   );
 }
