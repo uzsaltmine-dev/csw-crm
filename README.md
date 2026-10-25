@@ -24,9 +24,10 @@ Monorepo:
 
 - **Korxonalar** (`/admin#customers`): qidiruv (nom kirill/lotin, STIR, telefon), filtrlar, karta, aloqa raqamlari, shartnomalar.
   Ko'rish — admin, manager, yurist, GPS (o'z tumani); tahrirlash va shartnoma — admin, yurist; koordinata tasdig'i — admin, manager.
-- **Excel import** (faqat admin): call-center jadvali (.xlsx). Avval tahlil (bazaga yozilmaydi), keyin import. Viloyat/tuman yozuvlari
+- **Fayldan import** (`customers.import` ruxsati): call-center jadvali — .xlsx, .xls, .csv (UTF-8 yoki Windows-1251), .docx (jadval), matnli .pdf.
+  Skanerlangan PDF uchun OCR keyingi bosqichda. Avval tahlil (bazaga yozilmaydi), keyin import. Viloyat/tuman yozuvlari
   normallashtiriladi, bir korxonaning takror qatorlari birlashadi, barcha telefonlar saqlanadi; qayta import xavfsiz.
-  Buyurtmalar tarixi import qilinmaydi. Namuna (sun'iy ma'lumot): `docs/samples/call-center-namuna.xlsx`.
+  Buyurtmalar tarixi import qilinmaydi. Namunalar (sun'iy ma'lumot): `docs/samples/call-center-namuna.{xlsx,csv,docx,pdf}`.
 - **Biriktirish sharti:** korxonada STIR va amaldagi shartnoma bo'lmasa haydovchi biriktirilmaydi (`customer_incomplete`).
 - **Koordinata:** importdagi korxonada yo'q → birinchi tashrifda haydovchi dalolatnoma yopgan nuqta olinadi (radius tekshirilmaydi) →
   Manager tasdiqlaydi → keyingi tashriflar shu nuqta bo'yicha tekshiriladi.

@@ -1,19 +1,17 @@
-"""Call-center Excel faylidan korxonalarni import qilish.
+"""Call-center jadvalidan korxonalarni import qilish (.xlsx, .xls, .csv, .docx, matnli .pdf — table_readers).
 
-1. Sarlavha qatori bo'yicha varaq topiladi ("Ташкилот номи" + "Туман"); birinchi mos varaq olinadi —
+1. Sarlavha qatori bo'yicha varaq/jadval topiladi ("Ташкилот номи" + "Туман"); birinchi mos varaq olinadi —
    joriy faylda bu "Рес бўйича" (qolgan varaqlar uning tumanlar bo'yicha nusxasi).
 2. Viloyat/tuman nomlari normallashtiriladi va bazadagi tumanga bog'lanadi; topilmasa — qator xato ro'yxatiga.
 3. Qatorlar "tuman + normallashtirilgan nom" bo'yicha bitta korxonaga birlashtiriladi; barcha telefonlar saqlanadi.
 4. Bazada shu kalit bilan korxona bo'lsa — yangi aloqalar qo'shiladi, bo'sh maydonlar to'ldiriladi (qayta import xavfsiz).
 Buyurtmalar import qilinmaydi (qaror: faqat korxonalar).
 """
-import io
 import json
 import re
 from collections import Counter
 from dataclasses import dataclass, field
 
-from openpyxl import load_workbook
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -22,6 +20,7 @@ from app.core.errors import invalid
 from app.models import Customer, CustomerContact, District, ImportBatch, Region, User
 from app.models.enums import LocationStatus, SituationLevel
 from app.services import situation
+from app.services.table_readers import read_tables
 from app.services.normalize import format_phone, is_city, key, phone_digits, place_key
 
 MAX_ROWS = 50_000
@@ -29,14 +28,15 @@ MAX_ERRORS_IN_REPORT = 300
 
 # Sarlavha → maydon (normallashtirilgan sarlavhada shu bo'lak bo'lsa)
 COLUMNS = {
-    "region": ("hudud nomi", "viloyat"),
+    # "udud nomi"/"aqida": Windows-1251 CSV'da "Ҳ/ҳ" harfi yo'qoladi ("?удуд номи")
+    "region": ("hudud nomi", "udud nomi", "viloyat"),
     "district": ("tuman shahar nomi", "tuman"),
     "name": ("tashkilot nomi",),
     "activity": ("faoliyat turi",),
     "address": ("manzili", "manzil"),
     "phone": ("telefon",),
     "contact": ("buyurtma bergan xodim",),
-    "info": ("buyurtma haqida",),
+    "info": ("buyurtma haqida", "buyurtma a"),  # "buyurtma a" — Windows-1251 da "ҳақида" → "?а?ида"
     "stir": ("inn", "stir"),
 }
 SEPTIC = re.compile(r"assenizator|asenizator|assinizator|asinizator")
@@ -63,6 +63,7 @@ class Group:
 @dataclass
 class Plan:
     sheet: str
+    kind: str = "xlsx"
     rows_total: int = 0
     rows_ok: int = 0
     septic_rows: int = 0
@@ -84,7 +85,10 @@ def _header_map(row: tuple) -> dict[str, int] | None:
 def _cell(row: tuple, idx: int | None) -> str:
     if idx is None or idx >= len(row) or row[idx] is None:
         return ""
-    return re.sub(r"\s+", " ", str(row[idx])).strip()
+    v = row[idx]
+    if isinstance(v, float) and v.is_integer():  # .xls: telefon/STIR raqam sifatida (945121116.0)
+        v = int(v)
+    return re.sub(r"\s+", " ", str(v)).strip()
 
 
 async def _district_index(db: AsyncSession) -> dict[tuple[str, str, bool], int]:
@@ -92,14 +96,11 @@ async def _district_index(db: AsyncSession) -> dict[tuple[str, str, bool], int]:
     return {(place_key(r.name), place_key(d.name), is_city(d.name)): d.id for d, r in rows}
 
 
-async def build_plan(db: AsyncSession, content: bytes, allowed: set[int] | None = None) -> Plan:
-    try:
-        wb = load_workbook(io.BytesIO(content), read_only=True, data_only=True)
-    except Exception:  # noqa: BLE001 — har qanday buzilgan fayl
-        raise invalid("bad_excel", "Faylni o'qib bo'lmadi: .xlsx formatidagi Excel fayl yuklang")
+async def build_plan(db: AsyncSession, content: bytes, allowed: set[int] | None = None, file_name: str = "import.xlsx") -> Plan:
+    kind, tables = read_tables(file_name, content)
     districts = await _district_index(db)
-    for ws in wb.worksheets:
-        rows = ws.iter_rows(values_only=True)
+    for ws in tables:
+        rows = iter(ws.rows)
         header, head_row = None, 0
         for i, row in enumerate(rows, start=1):
             header = _header_map(row)
@@ -108,11 +109,13 @@ async def build_plan(db: AsyncSession, content: bytes, allowed: set[int] | None 
                 break
         if not header:
             continue
-        plan = Plan(sheet=ws.title)
+        plan = Plan(sheet=ws.title, kind=kind)
         for n, row in enumerate(rows, start=head_row + 1):
             name = _cell(row, header.get("name"))
             if not name:
                 continue  # bo'sh qator
+            if _header_map(row):
+                continue  # PDF/Word: har sahifada takrorlangan sarlavha
             plan.rows_total += 1
             if plan.rows_total > MAX_ROWS:
                 raise invalid("too_many_rows", f"Faylda {MAX_ROWS} dan ortiq qator bor")
@@ -144,12 +147,13 @@ async def build_plan(db: AsyncSession, content: bytes, allowed: set[int] | None 
             if len(stir) == 9:
                 g.stir = stir
         return plan
-    raise invalid("no_sheet", "Faylda \"Ташкилот номи\", \"Ҳудуд номи\" va \"Туман\" ustunlari bor varaq topilmadi")
+    raise invalid("no_sheet", "Faylda \"Ташкилот номи\", \"Ҳудуд номи\" va \"Туман\" ustunlari bor jadval topilmadi")
 
 
 @dataclass
 class ImportResult:
     sheet: str
+    file_kind: str
     rows_total: int
     rows_ok: int
     rows_skipped: int
@@ -175,7 +179,7 @@ async def next_fixed_no_start(db: AsyncSession) -> int:
 
 async def run(db: AsyncSession, user: User, file_name: str, content: bytes, dry_run: bool) -> ImportResult:
     from app.services.access import scope
-    plan = await build_plan(db, content, scope(user))
+    plan = await build_plan(db, content, scope(user), file_name)
     existing = {(c.district_id, c.name_key): c for c in (await db.execute(
         select(Customer).options(selectinload(Customer.contacts)))).scalars()}
     stirs = {s for (s,) in (await db.execute(select(Customer.stir).where(Customer.stir.is_not(None)))).all()}
@@ -226,11 +230,13 @@ async def run(db: AsyncSession, user: User, file_name: str, content: bytes, dry_
                 stirs.add(stir)
 
     errors = [{"row": e.row, "message": e.message} for e in plan.errors[:MAX_ERRORS_IN_REPORT]]
-    result = ImportResult(sheet=plan.sheet, rows_total=plan.rows_total, rows_ok=plan.rows_ok,
+    result = ImportResult(sheet=plan.sheet, file_kind=plan.kind, rows_total=plan.rows_total, rows_ok=plan.rows_ok,
                           rows_skipped=plan.rows_total - plan.rows_ok, septic_rows=plan.septic_rows, customers_new=new,
                           customers_existing=merged, contacts_added=contacts_added, by_district=dict(by_district), errors=errors)
     if dry_run:
-        await db.rollback()
+        # Tahlilda sessiyaga hech narsa qo'shilmaydi/o'zgartirilmaydi (yuqorida `continue`), shuning uchun rollback shart emas —
+        # rollback esa joriy xodim obyektini ham "eskirgan" qilib, keyingi o'qishda xato berardi
+        assert not db.new and not db.dirty, "tahlil bazaga yozmasligi kerak"
         return result
     batch.rows_total, batch.customers_created, batch.customers_merged, batch.rows_skipped = (
         plan.rows_total, new, merged, result.rows_skipped)

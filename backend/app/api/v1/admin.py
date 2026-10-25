@@ -37,6 +37,7 @@ from app.schemas import (
     VehicleUpdateIn,
 )
 from app.services import admin_service, customer_import
+from app.services.table_readers import file_kind
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 AdminOnly = Depends(require_roles(Role.admin))
@@ -168,10 +169,9 @@ MAX_IMPORT_BYTES = 10 * 1024 * 1024
 @router.post("/import/customers", response_model=ImportResultOut)
 async def import_customers(file: UploadFile = File(...), dry_run: bool = True, user: User = perm("customers.import"),
                            db: AsyncSession = DB):
-    """Call-center Excel fayli. Avval dry_run=true (tahlil, bazaga yozilmaydi), keyin dry_run=false.
-    Manager uchun — faqat o'z tumanlari qatorlari; boshqalari ogohlantirish bilan o'tkazib yuboriladi."""
-    if not (file.filename or "").lower().endswith(".xlsx"):
-        raise invalid("bad_excel", "Faqat .xlsx formatidagi Excel fayl qabul qilinadi")
+    """Call-center jadvali: .xlsx, .xls, .csv, .docx yoki matnli .pdf. Avval dry_run=true (tahlil, bazaga yozilmaydi),
+    keyin dry_run=false. Manager uchun — faqat o'z tumanlari qatorlari; boshqalari ogohlantirish bilan o'tkazib yuboriladi."""
+    file_kind(file.filename or "")  # qo'llab-quvvatlanmaydigan format — darhol 422
     content = await file.read(MAX_IMPORT_BYTES + 1)
     if len(content) > MAX_IMPORT_BYTES:
         raise invalid("file_too_large", "Fayl hajmi 10 MB dan oshmasin")

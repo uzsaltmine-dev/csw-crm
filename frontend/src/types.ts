@@ -122,6 +122,7 @@ export interface CustomerDetail extends CustomerListItem {
 
 export interface ImportResult {
   sheet: string;
+  file_kind: string;
   rows_total: number;
   rows_ok: number;
   rows_skipped: number;

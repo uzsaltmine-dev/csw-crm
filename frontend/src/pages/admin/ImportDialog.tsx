@@ -45,7 +45,7 @@ export function ImportDialog({ onClose, onImported }: { onClose: () => void; onI
           <Typography variant="body2" color="text.secondary">{t("import_hint")}</Typography>
           <Stack direction="row" spacing={1.5} alignItems="center">
             <Button component="label" variant="outlined" disabled={busy}>{t("choose_file")}
-              <input id="imp-file" hidden type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              <input id="imp-file" hidden type="file" accept=".xlsx,.xls,.csv,.docx,.pdf"
                 onChange={(e) => { setFile(e.target.files?.[0] ?? null); setReport(null); e.target.value = ""; }} />
             </Button>
             <Typography variant="body2" sx={{ wordBreak: "break-all" }}>{file?.name ?? "—"}</Typography>
@@ -54,7 +54,7 @@ export function ImportDialog({ onClose, onImported }: { onClose: () => void; onI
 
           {report && <>
             <Alert severity={report.dry_run ? "info" : "success"}>
-              {report.dry_run ? `${t("imp_sheet")}: «${report.sheet}»` : t("import_done", { n: report.customers_new })}
+              {report.dry_run ? `${t("imp_format", { f: report.file_kind.toUpperCase() })}, ${t("imp_sheet")}: «${report.sheet}»` : t("import_done", { n: report.customers_new })}
             </Alert>
             <Box sx={{ display: "grid", gap: 1, gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4, 1fr)" } }}>
               {stat(t("imp_rows"), report.rows_total)}
