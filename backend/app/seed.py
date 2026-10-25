@@ -12,7 +12,7 @@ from sqlalchemy import select
 from app.core.permissions import apply_template
 from app.core.security import hash_password
 from app.db.session import SessionLocal
-from app.models import AppSetting, Contract, Customer, District, Provider, Region, Request, User, UserDistrict, Vehicle
+from app.models import AppSetting, Contract, Customer, District, Provider, Region, Request, RequestEvent, User, UserDistrict, Vehicle
 from app.db.base import utcnow
 from app.models.enums import ContractType, LocationStatus, RequestStatus, Role, WasteType
 
@@ -84,16 +84,21 @@ async def seed() -> None:
                     db.add(r)
                     await db.flush()
                     r.number = f"AR-{r.id:06d}"
+                    db.add(RequestEvent(request_id=r.id, status=RequestStatus.new, created_at=now, note="namunaviy ariza"))
                 # Statistika uchun tarix: 6 kun oldin bajarilgan va 4 kun oldin ochilib muddati o'tgan ariza
                 for days, status in ((6, RequestStatus.done), (4, RequestStatus.new)):
                     created = now - timedelta(days=days)
                     r = Request(customer_id=c.id, contract_id=ct.id, district_id=d.id, waste_type=WasteType.household,
                                 volume_estimate=6, note="Namunaviy (tarix)", status=status, created_at=created,
                                 due_at=created + timedelta(hours=72), finished_at=created + timedelta(hours=20) if status == RequestStatus.done else None,
-                                overdue_notified=True)
+                                # Asakada muddati o'tgan ariza Vaziyat paneliga demo ishga tushgach 10 daqiqa ichida tushadi
+                                overdue_notified=d_name != "Asaka tumani")
                     db.add(r)
                     await db.flush()
                     r.number = f"AR-{r.id:06d}"
+                    db.add(RequestEvent(request_id=r.id, status=RequestStatus.new, created_at=created))
+                    if r.finished_at:
+                        db.add(RequestEvent(request_id=r.id, status=RequestStatus.done, created_at=r.finished_at))
                 # Kartasi to'liq bo'lmagan korxona (STIR, shartnoma, koordinata yo'q) — assenizator arizasi biriktirilmaydi,
                 # yurist STIR va shartnoma kiritgach biriktiriladi; birinchi tashrifdan keyin Manager koordinatani tasdiqlaydi
                 c2 = Customer(fixed_no=f"A-{200 + n:04d}", name=f"\"Yangi mijoz {n}\" MChJ", name_key=f"yangi mijoz {n} mchj",
@@ -106,6 +111,7 @@ async def seed() -> None:
                 db.add(r)
                 await db.flush()
                 r.number = f"AR-{r.id:06d}"
+                db.add(RequestEvent(request_id=r.id, status=RequestStatus.new, created_at=utcnow()))
         # Call-center operatori (demo: barcha tumanlar)
         operator = User(username="operator", password_hash=pwd, full_name="Call-center operatori", role=Role.operator)
         apply_template(operator)

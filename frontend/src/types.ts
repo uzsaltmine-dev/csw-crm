@@ -174,6 +174,7 @@ export interface DriverTask {
   due_at?: string | null;
   overdue?: boolean;
   is_repeat?: boolean;
+  seen?: boolean | null;
 }
 
 export type RequestSource = "phone" | "telegram" | "excel" | "walk_in";
@@ -186,6 +187,12 @@ export interface RequestItem extends Omit<DriverTask, "files"> {
   created_by_id: number | null;
   finished_at: string | null;
   cancel_reason: string | null;
+}
+
+export interface RequestDetail extends RequestItem {
+  driver_name: string | null;
+  created_by_name: string | null;
+  events: { status: RequestStatus; note: string | null; actor_name: string | null; created_at: string }[];
 }
 
 export interface Appeal {

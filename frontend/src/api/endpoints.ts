@@ -1,7 +1,7 @@
 import { api } from "./client";
 import { clearTokens, saveTokens, type Tokens } from "@/lib/session";
 import { closeSocket } from "@/lib/socket";
-import type { Access, AdminUser, Appeal, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
+import type { Access, AdminUser, Appeal, RequestDetail, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
   GpsDriver, ImportBatch, ImportResult, LocationStatus, Region, Role, Shift, SituationEvent, SituationLevel, User, Vehicle } from "@/types";
 
 export const gpsApi = {
@@ -119,7 +119,10 @@ export type OrderFields = { waste_type: WasteType; volume_estimate?: number | nu
 export type AppealCreate = OrderFields & { district_id: number; org_name: string; stir?: string | null; address?: string | null; activity_type?: string | null };
 
 export const requestsApi = {
-  list: (params: { mine?: boolean; overdue?: boolean; status?: string; district_id?: number; q?: string; limit?: number; offset?: number }) =>
+  detail: (id: number) => api.get<RequestDetail>(`/requests/${id}`).then((r) => r.data),
+  markSeen: (request_ids: number[]) => api.post("/requests/seen", { request_ids }),
+  list: (params: { mine?: boolean; overdue?: boolean; repeat?: boolean; status?: string; district_id?: number; waste_type?: string;
+    date_from?: string; date_to?: string; q?: string; limit?: number; offset?: number }) =>
     api.get<{ items: RequestItem[]; total: number }>("/requests", { params }).then((r) => r.data),
   openFor: (customer_id: number) => api.get<RequestItem[]>("/requests/open", { params: { customer_id } }).then((r) => r.data),
   create: (body: OrderFields & { customer_id: number; confirm_repeat?: boolean }) => api.post<RequestItem>("/requests", body).then((r) => r.data),
@@ -134,6 +137,26 @@ export const appealsApi = {
   reject: (id: number, reason: string) => api.post<Appeal>(`/appeals/${id}/reject`, { reason }).then((r) => r.data),
 };
 
+export type StatPeriod = "today" | "month" | "last10" | "last5";
+export type StatMetric = "received" | "repeat" | "pending" | "overdue" | "done" | "not_done";
+export interface StatDetail {
+  period: StatPeriod; metric: StatMetric; since: string; value: number; granularity: "hour" | "day";
+  series: { label: string; date?: string; value: number }[];
+  composition: { key: string; value: number }[];
+  histogram: { bucket: string; value: number }[];
+  districts: { district_id: number; name: string; value: number }[];
+}
+
 export const statsApi = {
-  summary: (period: "today" | "month" | "last10" | "last5") => api.get<Stats>("/stats/summary", { params: { period } }).then((r) => r.data),
+  summary: (period: StatPeriod) => api.get<Stats>("/stats/summary", { params: { period } }).then((r) => r.data),
+  detail: (period: StatPeriod, metric: StatMetric) => api.get<StatDetail>("/stats/detail", { params: { period, metric } }).then((r) => r.data),
+  /** Fayl sifatida yuklab olish (tab sessiyasida ham token bilan) */
+  export: async (period: StatPeriod, metric: StatMetric, format: "xlsx" | "pdf") => {
+    const r = await api.get<Blob>("/stats/export", { params: { period, metric, format }, responseType: "blob", timeout: 120_000 });
+    const name = /filename="([^"]+)"/.exec(r.headers["content-disposition"] ?? "")?.[1] ?? `statistika.${format}`;
+    const url = URL.createObjectURL(r.data);
+    const a = document.createElement("a");
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  },
 };

@@ -131,3 +131,14 @@ API'ni Postman bilan sinash: `Authorization: Bearer <token>` sarlavhasi bilan CS
   bajarilgan va bajarilmagan (soni va ulushi). Kartochka bosilsa — tumanlar kesimida diagramma va jadval. Manager — o'z tumanlari.
 - Yangi ruxsatlar: `requests.view/create/cancel`, `appeals.view/create/review`, `stats.view`. Demo login: `operator`.
 - Ovozli AI assistent bo'yicha kelishuvlar: `docs/plans/voice-ai-assistant.md`.
+
+## Statistika, Arizalar va GPS "Yangilar" (PR #10)
+
+- **Statistika** admin panelida birinchi yorliq. Kartochka (ko'rsatkich) tanlansa to'rtta diagramma faqat shu ko'rsatkich bo'yicha:
+  Area (dinamika: bugun — soatlar, boshqa davrlar — kunlar), Pie (tarkib), Histogramma (ochilgandan bajarilguncha soatlar: 0–24, 24–48,
+  48–72, 72+), Bar (tumanlar). Har biri "Jadval" ko'rinishiga o'tadi. **Excel / PDF** — tanlangan davr va ko'rsatkich bo'yicha
+  (`GET /api/v1/stats/export?period=&metric=&format=xlsx|pdf`; PDF shriftlari: `backend/app/assets/fonts`, DejaVu litsenziyasi).
+- **Arizalar** yorlig'i (`requests.view`; manager — o'z tumanlari): holat, tuman, xizmat turi, sana, qayta, muddati o'tgan, qidiruv;
+  karta + holatlar tarixi; `requests.cancel` bo'lsa yangi arizani sabab bilan bekor qilish.
+- **"Yangi"** — har xodim uchun alohida (`request_seen` jadvali, migratsiya 0008): arizani ochguncha/bosguncha belgilanadi.
+  GPS ro'yxati eng yangisi tepada; filtrlar: Yangilar (standart), Bugun, Qayta, Muddati o'tgan, Assenizator, Barchasi.

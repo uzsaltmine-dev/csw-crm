@@ -315,6 +315,13 @@ class RequestEvent(TimestampMixin, Base):
     note: Mapped[str | None] = mapped_column(String(255))
 
 
+class RequestSeen(TimestampMixin, Base):
+    """Xodim arizani ko'rganmi ("Yangi" belgisi har xodim uchun alohida)."""
+    __tablename__ = "request_seen"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    request_id: Mapped[int] = mapped_column(ForeignKey("requests.id", ondelete="CASCADE"), primary_key=True)
+
+
 class AppSetting(Base):
     __tablename__ = "app_settings"
     key: Mapped[str] = mapped_column(String(50), primary_key=True)
@@ -345,5 +352,5 @@ class SituationRead(Base):
 __all__ = [
     "Base", "Region", "Provider", "District", "User", "Vehicle", "Shift", "Customer", "CustomerContact", "ImportBatch", "Contract",
     "Request", "NaryadCounter", "Act", "ActFile", "RequestEvent", "AppSetting", "SituationEvent", "SituationRead",
-    "UserDistrict", "UserPermission", "Appeal",
+    "UserDistrict", "UserPermission", "Appeal", "RequestSeen",
 ]

@@ -29,10 +29,26 @@ async def active_for_driver(db: AsyncSession, driver_id: int) -> list[Request]:
 
 
 async def new_in_district(db: AsyncSession, district_id: int | None) -> list[Request]:
+    """Biriktirilmagan arizalar — eng yangisi tepada."""
     q = select(Request).where(Request.status == RequestStatus.new)
     if district_id:
         q = q.where(Request.district_id == district_id)
-    return list((await db.execute(_with_details(q.order_by(Request.created_at)))).scalars())
+    return list((await db.execute(_with_details(q.order_by(Request.created_at.desc(), Request.id.desc())))).scalars())
+
+
+async def seen_ids(db: AsyncSession, user_id: int, request_ids: list[int]) -> set[int]:
+    from app.models import RequestSeen
+    if not request_ids:
+        return set()
+    q = select(RequestSeen.request_id).where(RequestSeen.user_id == user_id, RequestSeen.request_id.in_(request_ids))
+    return set((await db.execute(q)).scalars())
+
+
+async def mark_seen(db: AsyncSession, user_id: int, request_ids: list[int]) -> None:
+    from app.models import RequestSeen
+    have = await seen_ids(db, user_id, request_ids)
+    db.add_all([RequestSeen(user_id=user_id, request_id=r) for r in set(request_ids) - have])
+    await db.commit()
 
 
 async def count_active_on_shift(db: AsyncSession, shift_id: int) -> int:

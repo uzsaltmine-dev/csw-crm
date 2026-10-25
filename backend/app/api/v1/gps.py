@@ -57,7 +57,15 @@ async def open_shift(body: ShiftOpenIn, user: User = Gps, db: AsyncSession = DB)
 
 @router.get("/requests", response_model=list[RequestOut])
 async def new_requests(district_id: int | None = Query(None), user: User = Gps, db: AsyncSession = DB):
-    return await req_repo.new_in_district(db, user.district_id or district_id)
+    """Biriktirilmagan arizalar (yangisi tepada); `seen` — shu xodim ko'rganmi (frontend "Yangilar" filtri)."""
+    rows = await req_repo.new_in_district(db, user.district_id or district_id)
+    seen = await req_repo.seen_ids(db, user.id, [r.id for r in rows])
+    out = []
+    for r in rows:
+        item = RequestOut.model_validate(r)
+        item.seen = r.id in seen
+        out.append(item)
+    return out
 
 
 @router.post("/requests/{request_id}/assign", response_model=RequestOut)
