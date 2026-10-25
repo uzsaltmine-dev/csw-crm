@@ -23,6 +23,13 @@ export function useSituationText() {
     for (const [k, v] of Object.entries(ev.params ?? {})) if (v !== null && v !== undefined) p[k] = v as string | number;
     if (typeof p.role === "string" && `r_${p.role}` in MESSAGES) p.role = t(`r_${p.role}` as MessageKey);
     if (typeof p.reason === "string" && `fr_${p.reason}` in MESSAGES) p.reason = t(`fr_${p.reason}` as MessageKey);
+    // Ruxsat kodlari ("vehicles.edit") → "Mashinalar: Tahrirlash"
+    for (const k of ["added", "removed"]) {
+      if (typeof p[k] === "string" && p[k] !== "—") p[k] = (p[k] as string).split(", ").map((code) => {
+        const [m, a] = code.split(".");
+        return `${t(`m_${m}` as MessageKey)}: ${t(`a_${a}` as MessageKey)}`;
+      }).join(", ");
+    }
     let s = t(key, p);
     if (ev.kind === "request_failed" && p.note) s += ` — ${p.note}`;
     return s;

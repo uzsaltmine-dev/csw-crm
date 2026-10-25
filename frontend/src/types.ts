@@ -13,16 +13,36 @@ export interface User {
   district_id: number | null;
   language: string;
   must_change_password: boolean;
+  /** Ruxsat kodlari ("customers.edit" ...); admin — hammasi */
+  permissions?: string[];
+  /** Ishlash doirasi (tumanlar) */
+  district_ids?: number[];
 }
 
 export interface AdminUser extends User {
   is_active: boolean;
   locked_until: string | null;
   created_at: string;
+  district_ids: number[];
+  permissions: string[];
+  approval_status: "approved" | "pending" | "rejected";
+  created_by_id: number | null;
 }
 
+export interface Access {
+  user_id: number;
+  role: Role;
+  permissions: string[];
+  district_ids: number[];
+  multi_district: boolean;
+  grantable: string[];
+  assignable_district_ids: number[] | null;
+}
+
+export interface DistrictRadius { id: number; name: string; gps_radius_m: number | null; effective_m: number }
+
 export interface Region { id: number; name: string }
-export interface District { id: number; name: string; region_id: number; is_active: boolean }
+export interface District { id: number; name: string; region_id: number; is_active: boolean; gps_radius_m?: number | null }
 export interface AdminVehicle { id: number; plate: string; model: string | null; district_id: number; is_active: boolean }
 
 export interface Vehicle {
@@ -181,4 +201,5 @@ export interface SituationEvent {
   ref_type: string | null;
   ref_id: number | null;
   created_at: string;
+  resolved?: boolean;
 }

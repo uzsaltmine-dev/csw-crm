@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, Box, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSituation } from "@/components/Situation";
+import { useCan } from "@/hooks/useCan";
 import { adminApi } from "@/api/endpoints";
 import { useI18n } from "@/i18n/I18nContext";
 import { useAppSelector } from "@/store";
@@ -18,16 +19,23 @@ type TabId = (typeof TABS)[number];
 
 export interface RefData { regions: Region[]; districts: District[]; reload: () => Promise<void>; canWrite: boolean }
 
-/** Admin: yozadi; Manager: ko'radi va koordinatani tasdiqlaydi; Yurist: faqat "Korxonalar" (backend ham shuni tekshiradi). */
+// Yorliq → uni ko'rsatadigan ruxsat ("admin" — faqat admin)
+const TAB_PERM: Record<TabId, string[] | "admin"> = {
+  situation: "admin", customers: ["customers.view"], users: ["staff.view"], districts: "admin",
+  vehicles: ["vehicles.view"], settings: ["settings.view", "settings.radius_edit"],
+};
+
+/** Boshqaruv paneli: yorliqlar ruxsatlarga qarab (admin — hammasi). Server har amalni o'zi ham tekshiradi. */
 export function AdminHome() {
   const { t } = useI18n();
   const role = useAppSelector((s) => s.auth.user?.role);
+  const can = useCan();
   const canWrite = role === "admin";
-  const tabs: readonly TabId[] = role === "legal" ? ["customers"] : TABS;
+  const tabs = TABS.filter((x) => TAB_PERM[x] === "admin" ? role === "admin" : (TAB_PERM[x] as string[]).some(can));
   const loc = useLocation();
   const nav = useNavigate();
   const situation = useSituation();
-  const tab: TabId = tabs.find((x) => loc.hash === `#${x}`) ?? tabs[0];
+  const tab: TabId | undefined = tabs.find((x) => loc.hash === `#${x}`) ?? tabs[0];
   const [regions, setRegions] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
 
@@ -44,10 +52,10 @@ export function AdminHome() {
 
   return (
     <Stack spacing={2}>
-      <Typography variant="h5">{t(role === "legal" ? "customers_title" : "admin_title")}</Typography>
-      {!canWrite && tab !== "customers" && tab !== "situation" && <Alert severity="info">{t("read_only")}</Alert>}
+      <Typography variant="h5">{t(role === "admin" ? "admin_title" : tabs.length === 1 && tabs[0] === "customers" ? "customers_title" : "work_panel")}</Typography>
+      {!tabs.length && <Alert severity="info">{t("no_panels")}</Alert>}
       <Paper variant="outlined">
-        <Tabs value={tab} onChange={(_, v: TabId) => pick(v)} variant="scrollable" allowScrollButtonsMobile>
+        <Tabs value={tab ?? false} onChange={(_, v: TabId) => pick(v)} variant="scrollable" allowScrollButtonsMobile>
           {tabs.map((x) => <Tab key={x} value={x} label={x === "situation" && situation?.unread
             ? <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>{t("tab_situation")}<CountPill n={situation.unread} /></Box>
             : t(`tab_${x}`)} />)}

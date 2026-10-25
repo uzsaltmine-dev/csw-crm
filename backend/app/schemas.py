@@ -36,7 +36,13 @@ class UserOut(ORM):
     must_change_password: bool = False
 
 
-class LoginOut(UserOut):
+class MeOut(UserOut):
+    """Joriy xodim: ruxsatlar va tumanlar doirasi (frontend yorliq va tugmalarni shunga qarab ko'rsatadi)."""
+    permissions: list[str] = []
+    district_ids: list[int] = []
+
+
+class LoginOut(MeOut):
     """Tab sessiya rejimida tokenlar javob tanasida qaytadi (cookie yozilmaydi)."""
     access_token: str | None = None
     refresh_token: str | None = None
@@ -59,6 +65,10 @@ class AdminUserOut(UserOut):
     is_active: bool
     locked_until: datetime | None
     created_at: datetime
+    district_ids: list[int] = []
+    permissions: list[str] = []
+    approval_status: str = "approved"
+    created_by_id: int | None = None
 
 
 class UserCreateIn(BaseModel):
@@ -67,6 +77,7 @@ class UserCreateIn(BaseModel):
     phone: str | None = Field(default=None, max_length=30)
     role: Role
     district_id: int | None = None
+    district_ids: list[int] = []  # manager/yurist/operator: bir nechta tuman
     language: str = Field(default="uz", pattern=r"^(uz|cy|ru|en)$")
     password: str = Field(min_length=1, max_length=128)  # vaqtinchalik — birinchi kirishda almashtiriladi
 
@@ -76,6 +87,7 @@ class UserUpdateIn(BaseModel):
     phone: str | None = Field(default=None, max_length=30)
     role: Role | None = None
     district_id: int | None = None
+    district_ids: list[int] | None = None
     language: str | None = Field(default=None, pattern=r"^(uz|cy|ru|en)$")
     is_active: bool | None = None
 
@@ -94,6 +106,7 @@ class DistrictOut(ORM):
     name: str
     region_id: int
     is_active: bool
+    gps_radius_m: int | None = None
 
 
 class DistrictIn(BaseModel):
@@ -127,8 +140,35 @@ class VehicleUpdateIn(BaseModel):
     is_active: bool | None = None
 
 
+class DistrictRadiusOut(BaseModel):
+    id: int
+    name: str
+    gps_radius_m: int | None  # o'z qiymati; None — umumiy
+    effective_m: int
+
+
 class SettingsOut(BaseModel):
     gps_radius_m: int
+    districts: list[DistrictRadiusOut] = []
+
+
+class DistrictRadiusIn(BaseModel):
+    gps_radius_m: int | None = Field(default=None, ge=100, le=300)  # None — umumiy qiymatga qaytish
+
+
+class AccessOut(BaseModel):
+    user_id: int
+    role: Role
+    permissions: list[str]
+    district_ids: list[int]
+    multi_district: bool            # tumanlar shu oynada boshqariladi (manager/yurist/operator)
+    grantable: list[str]            # joriy xodim bera/ola oladigan ruxsatlar
+    assignable_district_ids: list[int] | None  # None — hammasi (admin)
+
+
+class AccessIn(BaseModel):
+    permissions: list[str]
+    district_ids: list[int] | None = None
 
 
 class SettingsIn(BaseModel):
@@ -383,6 +423,7 @@ class SituationOut(BaseModel):
     ref_type: str | None
     ref_id: int | None
     created_at: datetime
+    resolved: bool = False  # staff_pending: admin qaror qabul qilganmi
 
 
 class SituationPage(BaseModel):

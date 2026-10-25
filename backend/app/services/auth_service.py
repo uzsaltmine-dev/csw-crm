@@ -16,6 +16,8 @@ async def login(db: AsyncSession, username: str, password: str) -> User:
     s = get_settings()
     user = await users_repo.by_username(db, username.strip().lower())
     bad = AppError(401, "invalid_credentials", "Login yoki parol noto'g'ri")
+    if user and user.approval_status == "pending" and verify_password(password, user.password_hash):
+        raise AppError(403, "account_pending", "Hisobingiz admin tasdig'ini kutmoqda")
     if not user or not user.is_active:
         raise bad
     now = utcnow()

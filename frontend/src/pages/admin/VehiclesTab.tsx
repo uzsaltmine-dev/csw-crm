@@ -3,6 +3,7 @@ import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, MenuIt
   TableContainer, TableHead, TableRow, TextField } from "@mui/material";
 import { adminApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
+import { useCan } from "@/hooks/useCan";
 import { useI18n } from "@/i18n/I18nContext";
 import { confirmDialog, toast } from "@/lib/alerts";
 import type { AdminVehicle } from "@/types";
@@ -10,8 +11,11 @@ import { districtLabel, type RefData } from "./AdminHome";
 
 type Form = { id?: number; plate: string; model: string; district_id: number | "" };
 
-export function VehiclesTab({ districts, canWrite }: RefData) {
+export function VehiclesTab({ districts }: RefData) {
   const { t, tErr } = useI18n();
+  const can = useCan();
+  const canCreate = can("vehicles.create"), canEdit = can("vehicles.edit"), canDeactivate = can("vehicles.deactivate");
+  const canWrite = canEdit || canDeactivate;
   const [vehicles, setVehicles] = useState<AdminVehicle[]>([]);
   const [district, setDistrict] = useState<number | "">("");
   const [form, setForm] = useState<Form | null>(null);
@@ -45,7 +49,7 @@ export function VehiclesTab({ districts, canWrite }: RefData) {
           <MenuItem value="">{t("all")}</MenuItem>
           {districts.map((d) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}
         </TextField>
-        {canWrite && <Button variant="contained" onClick={() => setForm({ plate: "", model: "", district_id: district })}>{t("new_vehicle")}</Button>}
+        {canCreate && <Button variant="contained" onClick={() => setForm({ plate: "", model: "", district_id: district })}>{t("new_vehicle")}</Button>}
       </Stack>
       <TableContainer>
         <Table size="small">
@@ -58,8 +62,8 @@ export function VehiclesTab({ districts, canWrite }: RefData) {
                 <TableCell>{districtLabel(districts, v.district_id)}</TableCell>
                 <TableCell><Chip size="small" color={v.is_active ? "success" : "default"} label={t(v.is_active ? "active" : "inactive")} /></TableCell>
                 {canWrite && <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
-                  <Button size="small" onClick={() => setForm({ id: v.id, plate: v.plate, model: v.model ?? "", district_id: v.district_id })}>{t("edit")}</Button>
-                  <Button size="small" color={v.is_active ? "error" : "success"} disabled={busy} onClick={() => toggle(v)}>{t(v.is_active ? "deactivate" : "activate")}</Button>
+                  {canEdit && <Button size="small" onClick={() => setForm({ id: v.id, plate: v.plate, model: v.model ?? "", district_id: v.district_id })}>{t("edit")}</Button>}
+                  {canDeactivate && <Button size="small" color={v.is_active ? "error" : "success"} disabled={busy} onClick={() => toggle(v)}>{t(v.is_active ? "deactivate" : "activate")}</Button>}
                 </TableCell>}
               </TableRow>
             ))}

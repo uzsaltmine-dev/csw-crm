@@ -8,6 +8,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.core.permissions import apply_template
 from app.core.security import hash_password
 from app.db.session import get_session
 from app.main import create_app
@@ -48,6 +49,8 @@ async def world(sessionmaker):
             "admin": User(username="admin", password_hash=pwd, full_name="Admin", role=Role.admin),
             "legal": User(username="legal", password_hash=pwd, full_name="Yurist", role=Role.legal),
         }
+        for u in users.values():
+            apply_template(u, [da.id, db_.id])
         db.add_all(users.values())
         v1, v2 = Vehicle(plate="60 101 AB", district_id=da.id), Vehicle(plate="60 102 AB", district_id=da.id)
         vb = Vehicle(plate="75 201 BA", district_id=db_.id)

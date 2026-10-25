@@ -5,7 +5,7 @@ import { customersApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
 import { useI18n } from "@/i18n/I18nContext";
 import { toast } from "@/lib/alerts";
-import { useAppSelector } from "@/store";
+import { useCan } from "@/hooks/useCan";
 import type { CustomerListItem, LocationStatus } from "@/types";
 import { districtLabel, type RefData } from "./AdminHome";
 import { CustomerDialog } from "./CustomerDialog";
@@ -29,9 +29,9 @@ export function LocationChip({ status }: { status: LocationStatus }) {
 /** Ko'rish: admin, manager, yurist. Karta/shartnoma: admin, yurist. Koordinata tasdig'i: admin, manager. Import: admin. */
 export function CustomersTab({ districts }: RefData) {
   const { t, tErr } = useI18n();
-  const role = useAppSelector((s) => s.auth.user?.role);
-  const canEdit = role === "admin" || role === "legal";
-  const canImport = role === "admin";
+  const can = useCan();
+  const canEdit = can("customers.create");
+  const canImport = can("customers.import");
   const [items, setItems] = useState<CustomerListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [district, setDistrict] = useState<number | "">("");
