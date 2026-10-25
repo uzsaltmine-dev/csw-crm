@@ -9,6 +9,7 @@ import { confirmDialog, toast } from "@/lib/alerts";
 import { useAppSelector } from "@/store";
 import type { AdminUser, Role } from "@/types";
 import { districtLabel, type RefData } from "./AdminHome";
+import { PasswordField } from "@/components/PasswordField";
 
 const ROLES: Role[] = ["admin", "manager", "operator", "gps", "legal", "driver"];
 const NEEDS_DISTRICT: Role[] = ["driver", "gps"];
@@ -121,7 +122,7 @@ export function UsersTab({ districts, canWrite }: RefData) {
               {!needsDistrict && <MenuItem value="">—</MenuItem>}
               {districts.filter((d) => d.is_active || d.id === form.district_id).map((d) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}
             </TextField>
-            {!form.id && <TextField id="f-password" label={t("temp_password")} value={form.password} helperText={t("temp_password_hint")}
+            {!form.id && <PasswordField defaultVisible id="f-password" label={t("temp_password")} value={form.password} helperText={t("temp_password_hint")}
               onChange={(e) => setForm({ ...form, password: e.target.value })} />}
           </Stack>
         </DialogContent>}
@@ -134,7 +135,7 @@ export function UsersTab({ districts, canWrite }: RefData) {
       <Dialog open={!!reset} onClose={() => setReset(null)} fullWidth maxWidth="xs">
         <DialogTitle>{t("reset_password")}: {reset?.user.username}</DialogTitle>
         <DialogContent>
-          <TextField id="reset-password" sx={{ mt: 1 }} fullWidth label={t("temp_password")} helperText={t("temp_password_hint")}
+          <PasswordField defaultVisible id="reset-password" sx={{ mt: 1 }} fullWidth label={t("temp_password")} helperText={t("temp_password_hint")}
             value={reset?.password ?? ""} onChange={(e) => reset && setReset({ ...reset, password: e.target.value })} />
         </DialogContent>
         <DialogActions>

@@ -55,3 +55,16 @@ class WasteType(str, Enum):
     construction = "construction"
     bulky = "bulky"
     green = "green"
+    septic = "septic"  # ассенизатор — suyuq chiqindi
+
+
+class LocationStatus(str, Enum):
+    none = "none"            # koordinata yo'q (masalan, Excel'dan import)
+    pending = "pending"      # birinchi tashrifda haydovchi GPS'idan olindi, Manager tasdiqlashi kerak
+    confirmed = "confirmed"  # tasdiqlangan — radius tekshiruvi shu nuqta bo'yicha
+
+
+class SituationLevel(str, Enum):
+    info = "info"
+    warning = "warning"
+    error = "error"

@@ -1,3 +1,5 @@
+from datetime import date
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import conflict, forbidden, invalid, not_found
@@ -17,6 +19,13 @@ async def assign(db: AsyncSession, gps_user: User, request_id: int, driver_id: i
         raise forbidden("Bu ariza sizning tumaningizga tegishli emas")
     if req.status != RequestStatus.new:
         raise conflict("request_not_new", "Ariza allaqachon biriktirilgan")
+    # Korxona kartasi to'liq bo'lmasa (STIR yo'q yoki amaldagi shartnoma yo'q) — haydovchi yuborilmaydi
+    missing = req.customer.missing_fields
+    if missing:
+        raise conflict("customer_incomplete", "Korxona ma'lumoti to'liq emas: " + ", ".join(missing))
+    # Arizada shartnoma yo'q yoki muddati o'tgan bo'lsa — amaldagisi bog'lanadi (dalolatnomaga shu yoziladi)
+    if req.contract is None or req.contract.customer_id != req.customer_id or not _in_force(req.contract):
+        req.contract = req.customer.active_contract()
     driver = await db.get(User, driver_id)
     if not driver or driver.role != Role.driver or not driver.is_active:
         raise not_found("driver")
@@ -34,3 +43,9 @@ async def assign(db: AsyncSession, gps_user: User, request_id: int, driver_id: i
     await db.commit()
     await events.broadcast(req)
     return await req_repo.by_id(db, req.id)
+
+
+
+def _in_force(contract) -> bool:
+    today = date.today()
+    return contract.is_active and contract.valid_from <= today <= contract.valid_to

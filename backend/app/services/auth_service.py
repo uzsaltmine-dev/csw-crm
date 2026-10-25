@@ -7,7 +7,9 @@ from app.core.errors import AppError
 from app.core.security import hash_password, verify_password
 from app.db.base import utcnow
 from app.models import User
+from app.models.enums import SituationLevel
 from app.repositories import users as users_repo
+from app.services import situation
 
 
 async def login(db: AsyncSession, username: str, password: str) -> User:
@@ -24,7 +26,12 @@ async def login(db: AsyncSession, username: str, password: str) -> User:
         if user.failed_logins >= s.login_max_attempts:
             user.locked_until = now + timedelta(minutes=s.login_lock_minutes)
             user.failed_logins = 0
-        await db.commit()
+            situation.add(db, SituationLevel.warning, "account_locked",
+                          f"«{user.username}» akkaunti {s.login_lock_minutes} daqiqaga bloklandi: "
+                          f"{s.login_max_attempts} marta noto'g'ri parol kiritildi",
+                          params={"username": user.username, "minutes": s.login_lock_minutes, "attempts": s.login_max_attempts},
+                          district_id=user.district_id, ref=("user", user.id))
+        await situation.commit(db)
         raise bad
     user.failed_logins = 0
     user.locked_until = None

@@ -55,17 +55,75 @@ export interface GpsDriver {
   shift: Shift | null;
 }
 
+export type LocationStatus = "none" | "pending" | "confirmed";
+
 export interface Customer {
   id: number;
   fixed_no: string;
-  stir: string;
+  stir: string | null;
   name: string;
   director: string | null;
   phone: string | null;
   address: string | null;
   district_id: number;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
+  location_status: LocationStatus;
+  /** "stir" | "contract" — bo'lsa haydovchi biriktirilmaydi */
+  missing_fields: string[];
+}
+
+export interface CustomerListItem extends Customer {
+  activity_type: string | null;
+  source: "excel" | "manual" | string;
+  contacts_count: number;
+}
+
+export interface Contact { id: number; name: string | null; phone: string }
+
+export type ContractType = "per_trip" | "by_volume" | "monthly" | "one_off";
+
+export interface ContractFull {
+  id: number;
+  number: string;
+  signed_on: string | null;
+  type: ContractType;
+  price: string | null;
+  valid_from: string;
+  valid_to: string;
+  is_active: boolean;
+}
+
+export interface CustomerDetail extends CustomerListItem {
+  contacts: Contact[];
+  contracts: ContractFull[];
+  created_at: string;
+}
+
+export interface ImportResult {
+  sheet: string;
+  rows_total: number;
+  rows_ok: number;
+  rows_skipped: number;
+  septic_rows: number;
+  customers_new: number;
+  customers_existing: number;
+  contacts_added: number;
+  by_district: Record<string, number>;
+  errors: { row: number; message: string }[];
+  batch_id: number | null;
+  dry_run: boolean;
+}
+
+export interface ImportBatch {
+  id: number;
+  file_name: string;
+  uploaded_by_id: number;
+  rows_total: number;
+  customers_created: number;
+  customers_merged: number;
+  rows_skipped: number;
+  created_at: string;
 }
 
 export interface Contract {
@@ -95,7 +153,7 @@ export interface DriverTask {
 
 export interface CompleteResult {
   request: DriverTask;
-  act: { containers: number; volume_m3: string; distance_m: number; radius_m: number; in_radius: boolean; vehicle_plate: string; completed_at: string };
+  act: { containers: number; volume_m3: string; distance_m: number | null; radius_m: number; in_radius: boolean | null; vehicle_plate: string; completed_at: string };
 }
 
 export interface ApiErrorBody {
@@ -107,4 +165,20 @@ export interface Coords {
   lat: number;
   lng: number;
   accuracy?: number;
+}
+
+export type SituationLevel = "info" | "warning" | "error";
+
+export interface SituationEvent {
+  id: number;
+  level: SituationLevel;
+  kind: string;
+  message: string;
+  params: Record<string, unknown>;
+  district_id: number | null;
+  actor_id: number | null;
+  actor_name?: string | null;
+  ref_type: string | null;
+  ref_id: number | null;
+  created_at: string;
 }

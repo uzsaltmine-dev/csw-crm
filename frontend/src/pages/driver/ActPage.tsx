@@ -66,7 +66,9 @@ export function ActPage() {
   if (!task || !shift) {
     return <Alert severity="info" action={<Button onClick={() => nav("/driver")}>{t("back")}</Button>}>{t("no_tasks")}</Alert>;
   }
-  const dist = geo.coords ? distanceM(geo.coords, task.customer) : null;
+  const c = task.customer;
+  // Koordinata tasdiqlanmagan korxona (birinchi tashrif) — masofa ko'rsatilmaydi
+  const dist = geo.coords && c.location_status === "confirmed" && c.lat !== null && c.lng !== null ? distanceM(geo.coords, { lat: c.lat, lng: c.lng }) : null;
 
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -91,7 +93,8 @@ export function ActPage() {
       containers: Number(draft.containers), volume_m3: Number(draft.volume), note: draft.note.trim(), lat: geo.coords!.lat, lng: geo.coords!.lng,
     });
     sessionStorage.removeItem(`act:${task.id}`);
-    toast(res.act.in_radius ? t("done_ok") : t("done_suspect", { m: res.act.distance_m }), res.act.in_radius ? "success" : "warning");
+    if (res.act.in_radius === null) toast(t("done_first_visit"), "info");
+    else toast(res.act.in_radius ? t("done_ok") : t("done_suspect", { m: res.act.distance_m ?? 0 }), res.act.in_radius ? "success" : "warning");
     dispatch(removeTask(task.id));
     nav("/driver");
   });
@@ -138,7 +141,7 @@ export function ActPage() {
         {geo.error === "denied" && <Alert severity="error">{t("gps_denied")}</Alert>}
         <Alert severity={geo.coords ? "success" : "info"}>
           {geo.coords
-            ? <>{geo.coords.lat.toFixed(5)}, {geo.coords.lng.toFixed(5)} · {t("gps_accuracy", { m: geo.coords.accuracy ?? "?" })}{dist !== null && <> · {t("distance_to", { m: dist })}</>}</>
+            ? <>{geo.coords.lat.toFixed(5)}, {geo.coords.lng.toFixed(5)} · {t("gps_accuracy", { m: geo.coords.accuracy ?? "?" })}{dist !== null ? <> · {t("distance_to", { m: dist })}</> : c.location_status !== "confirmed" && <> · {t("first_visit")}</>}</>
             : t("gps_waiting")}
         </Alert>
 

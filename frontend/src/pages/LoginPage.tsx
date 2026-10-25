@@ -6,6 +6,7 @@ import { homePath } from "@/lib/routes";
 import { useI18n } from "@/i18n/I18nContext";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { login } from "@/store/authSlice";
+import { PasswordField } from "@/components/PasswordField";
 
 export function LoginPage() {
   const { t, tErr } = useI18n();
@@ -36,7 +37,7 @@ export function LoginPage() {
           {import.meta.env.VITE_DEMO === "1" && <Alert severity="info">{t("demo_hint")}</Alert>}
           <TextField id="username" label={t("username")} value={username} onChange={(e) => setUsername(e.target.value)}
             autoComplete="username" autoCapitalize="none" required />
-          <TextField id="password" label={t("password")} type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+          <PasswordField id="password" label={t("password")} value={password} onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password" required />
           <Button type="submit" variant="contained" size="large" disabled={busy || !online}>{t("sign_in")}</Button>
         </Stack>

@@ -3,7 +3,16 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import ContractType, FailReason, FileKind, RequestStatus, Role, ShiftStatus, WasteType
+from app.models.enums import (
+    ContractType,
+    FailReason,
+    FileKind,
+    LocationStatus,
+    RequestStatus,
+    Role,
+    ShiftStatus,
+    WasteType,
+)
 
 
 class ORM(BaseModel):
@@ -163,14 +172,16 @@ class ShiftOut(ORM):
 class CustomerOut(ORM):
     id: int
     fixed_no: str
-    stir: str
+    stir: str | None
     name: str
     director: str | None
     phone: str | None
     address: str | None
     district_id: int
-    lat: float
-    lng: float
+    lat: float | None
+    lng: float | None
+    location_status: LocationStatus
+    missing_fields: list[str] = []  # 'stir', 'contract' — bo'lsa haydovchi biriktirilmaydi
 
 
 class ContractOut(ORM):
@@ -218,9 +229,9 @@ class CompleteIn(BaseModel):
 class ActOut(ORM):
     containers: int
     volume_m3: Decimal
-    distance_m: int
+    distance_m: int | None  # korxona koordinatasi tasdiqlanmagan bo'lsa — None
     radius_m: int
-    in_radius: bool
+    in_radius: bool | None
     vehicle_plate: str
     completed_at: datetime
 
@@ -243,3 +254,130 @@ class FileOut(ORM):
 
 class AssignIn(BaseModel):
     driver_id: int
+
+
+# --- korxonalar ---
+class ContactOut(ORM):
+    id: int
+    name: str | None
+    phone: str
+
+
+class ContactIn(BaseModel):
+    name: str | None = Field(default=None, max_length=150)
+    phone: str = Field(min_length=1, max_length=30)
+
+
+class ContractFullOut(ContractOut):
+    price: Decimal | None
+    valid_from: date
+    valid_to: date
+    is_active: bool
+
+
+class CustomerListOut(CustomerOut):
+    activity_type: str | None
+    source: str
+    contacts_count: int = 0
+
+
+class CustomerDetailOut(CustomerListOut):
+    contacts: list[ContactOut]
+    contracts: list[ContractFullOut]
+    created_at: datetime
+
+
+class CustomerPage(BaseModel):
+    items: list[CustomerListOut]
+    total: int
+
+
+class CustomerIn(BaseModel):
+    name: str = Field(min_length=2, max_length=200)
+    district_id: int
+    stir: str | None = Field(default=None, pattern=r"^\d{9}$")
+    director: str | None = Field(default=None, max_length=150)
+    phone: str | None = Field(default=None, max_length=30)
+    address: str | None = Field(default=None, max_length=255)
+    activity_type: str | None = Field(default=None, max_length=100)
+
+
+class CustomerUpdateIn(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=200)
+    stir: str | None = Field(default=None, pattern=r"^\d{9}$")
+    director: str | None = Field(default=None, max_length=150)
+    phone: str | None = Field(default=None, max_length=30)
+    address: str | None = Field(default=None, max_length=255)
+    activity_type: str | None = Field(default=None, max_length=100)
+
+
+class ContractIn(BaseModel):
+    number: str = Field(min_length=1, max_length=40)
+    type: ContractType
+    signed_on: date | None = None
+    price: Decimal | None = Field(default=None, ge=0, max_digits=14, decimal_places=2)
+    valid_from: date
+    valid_to: date
+
+
+class LocationConfirmIn(BaseModel):
+    """Bo'sh bo'lsa — haydovchi olgan nuqta tasdiqlanadi; berilsa — shu nuqta (qo'lda tuzatish)."""
+    lat: float | None = Field(default=None, ge=-90, le=90)
+    lng: float | None = Field(default=None, ge=-180, le=180)
+
+
+class ImportErrorOut(BaseModel):
+    row: int
+    message: str
+
+
+class ImportResultOut(BaseModel):
+    sheet: str
+    rows_total: int
+    rows_ok: int
+    rows_skipped: int
+    septic_rows: int
+    customers_new: int
+    customers_existing: int
+    contacts_added: int
+    by_district: dict[str, int]
+    errors: list[ImportErrorOut]
+    batch_id: int | None = None
+    dry_run: bool = True
+
+
+class ImportBatchOut(ORM):
+    id: int
+    file_name: str
+    uploaded_by_id: int
+    rows_total: int
+    customers_created: int
+    customers_merged: int
+    rows_skipped: int
+    created_at: datetime
+
+
+# --- vaziyat paneli ---
+class SituationOut(BaseModel):
+    id: int
+    level: str
+    kind: str
+    message: str
+    params: dict = {}
+    district_id: int | None
+    actor_id: int | None
+    actor_name: str | None = None
+    ref_type: str | None
+    ref_id: int | None
+    created_at: datetime
+
+
+class SituationPage(BaseModel):
+    items: list[SituationOut]
+    total: int
+    unread: int
+    last_read_id: int
+
+
+class SituationReadIn(BaseModel):
+    up_to_id: int | None = None  # bo'sh — hammasi o'qildi
