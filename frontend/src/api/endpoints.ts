@@ -1,6 +1,6 @@
 import { api } from "./client";
 import type { AdminUser, AdminVehicle, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
-  GpsDriver, ImportBatch, ImportResult, LocationStatus, Region, Role, Shift, User, Vehicle } from "@/types";
+  GpsDriver, ImportBatch, ImportResult, LocationStatus, Region, Role, Shift, SituationEvent, SituationLevel, User, Vehicle } from "@/types";
 
 export const gpsApi = {
   drivers: () => api.get<GpsDriver[]>("/gps/drivers").then((r) => r.data),
@@ -86,4 +86,14 @@ export const customersApi = {
     return api.post<ImportResult>("/admin/import/customers", fd, { params: { dry_run: dryRun }, timeout: 180_000 }).then((r) => r.data);
   },
   batches: () => api.get<ImportBatch[]>("/admin/import/batches").then((r) => r.data),
+};
+
+export type SituationQuery = { level?: SituationLevel; kind?: string; district_id?: number; date_from?: string; date_to?: string;
+  unread?: boolean; limit?: number; offset?: number };
+
+export const situationApi = {
+  list: (params: SituationQuery) =>
+    api.get<{ items: SituationEvent[]; total: number; unread: number; last_read_id: number }>("/situation", { params }).then((r) => r.data),
+  unread: () => api.get<{ unread: number }>("/situation/unread").then((r) => r.data),
+  markRead: (up_to_id?: number) => api.post<{ unread: number; last_read_id: number }>("/situation/read", { up_to_id }).then((r) => r.data),
 };

@@ -44,8 +44,8 @@ async def users(role: Role | None = None, district_id: int | None = None, active
 
 
 @router.post("/users", response_model=AdminUserOut, status_code=201)
-async def create_user(body: UserCreateIn, _: User = Writer, db: AsyncSession = DB):
-    return await admin_service.create_user(db, body)
+async def create_user(body: UserCreateIn, admin: User = Writer, db: AsyncSession = DB):
+    return await admin_service.create_user(db, admin, body)
 
 
 @router.patch("/users/{user_id}", response_model=AdminUserOut)
@@ -54,8 +54,8 @@ async def update_user(user_id: int, body: UserUpdateIn, admin: User = Writer, db
 
 
 @router.post("/users/{user_id}/reset-password", response_model=AdminUserOut)
-async def reset_password(user_id: int, body: PasswordResetIn, _: User = Writer, db: AsyncSession = DB):
-    return await admin_service.reset_password(db, user_id, body.password)
+async def reset_password(user_id: int, body: PasswordResetIn, admin: User = Writer, db: AsyncSession = DB):
+    return await admin_service.reset_password(db, admin, user_id, body.password)
 
 
 @router.get("/regions", response_model=list[RegionOut])
@@ -74,8 +74,8 @@ async def create_district(body: DistrictIn, _: User = Writer, db: AsyncSession =
 
 
 @router.patch("/districts/{district_id}", response_model=DistrictOut)
-async def update_district(district_id: int, body: DistrictUpdateIn, _: User = Writer, db: AsyncSession = DB):
-    return await admin_service.update_district(db, district_id, body)
+async def update_district(district_id: int, body: DistrictUpdateIn, admin: User = Writer, db: AsyncSession = DB):
+    return await admin_service.update_district(db, admin, district_id, body)
 
 
 @router.get("/vehicles", response_model=list[AdminVehicleOut])
@@ -89,8 +89,8 @@ async def create_vehicle(body: VehicleIn, _: User = Writer, db: AsyncSession = D
 
 
 @router.patch("/vehicles/{vehicle_id}", response_model=AdminVehicleOut)
-async def update_vehicle(vehicle_id: int, body: VehicleUpdateIn, _: User = Writer, db: AsyncSession = DB):
-    return await admin_service.update_vehicle(db, vehicle_id, body)
+async def update_vehicle(vehicle_id: int, body: VehicleUpdateIn, admin: User = Writer, db: AsyncSession = DB):
+    return await admin_service.update_vehicle(db, admin, vehicle_id, body)
 
 
 @router.get("/settings", response_model=SettingsOut)
@@ -99,8 +99,8 @@ async def get_settings(_: User = Reader, db: AsyncSession = DB):
 
 
 @router.put("/settings", response_model=SettingsOut)
-async def put_settings(body: SettingsIn, _: User = Writer, db: AsyncSession = DB):
-    return SettingsOut(gps_radius_m=await admin_service.set_gps_radius(db, body.gps_radius_m))
+async def put_settings(body: SettingsIn, admin: User = Writer, db: AsyncSession = DB):
+    return SettingsOut(gps_radius_m=await admin_service.set_gps_radius(db, admin, body.gps_radius_m))
 
 
 MAX_IMPORT_BYTES = 10 * 1024 * 1024
