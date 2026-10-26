@@ -1,7 +1,7 @@
 """Barcha modellar shu yerdan import qilinadi (Alembic autogenerate ham shuni ishlatadi)."""
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Enum as SAEnum, Float, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Enum as SAEnum, Float, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, false as sa_false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin, utcnow
@@ -266,6 +266,32 @@ class Appeal(TimestampMixin, Base):
     request_id: Mapped[int | None] = mapped_column(ForeignKey("requests.id"))
 
 
+class ChatMessage(TimestampMixin, Base):
+    """Ariza yoki murojaat ichidagi yozishma: matn yoki ovozli xabar (audio 90 kun saqlanadi)."""
+    __tablename__ = "chat_messages"
+    __table_args__ = (Index("ix_chat_messages_thread", "thread_type", "thread_id", "id"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    thread_type: Mapped[str] = mapped_column(String(10))  # "request" | "appeal"
+    thread_id: Mapped[int] = mapped_column(Integer)
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    kind: Mapped[str] = mapped_column(String(10), default="text")  # "text" | "voice"
+    text: Mapped[str | None] = mapped_column(Text)
+    file_key: Mapped[str | None] = mapped_column(String(200))
+    content_type: Mapped[str | None] = mapped_column(String(50))
+    duration_s: Mapped[int | None] = mapped_column(Integer)
+    expired: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
+    author: Mapped["User"] = relationship(lazy="joined")
+
+
+class ChatRead(Base):
+    """Xodim yozishmani qayergacha o'qigani."""
+    __tablename__ = "chat_reads"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    thread_type: Mapped[str] = mapped_column(String(10), primary_key=True)
+    thread_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    last_read_id: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class NaryadCounter(Base):
     """Avtonaryad tartib raqami: har bir xizmat ko'rsatuvchi uchun har yili 1 dan."""
     __tablename__ = "naryad_counters"
@@ -352,5 +378,5 @@ class SituationRead(Base):
 __all__ = [
     "Base", "Region", "Provider", "District", "User", "Vehicle", "Shift", "Customer", "CustomerContact", "ImportBatch", "Contract",
     "Request", "NaryadCounter", "Act", "ActFile", "RequestEvent", "AppSetting", "SituationEvent", "SituationRead",
-    "UserDistrict", "UserPermission", "Appeal", "RequestSeen",
+    "UserDistrict", "UserPermission", "Appeal", "RequestSeen", "ChatMessage", "ChatRead",
 ]

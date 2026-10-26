@@ -1,7 +1,7 @@
 import { api } from "./client";
 import { clearTokens, saveTokens, type Tokens } from "@/lib/session";
 import { closeSocket } from "@/lib/socket";
-import type { Access, AdminUser, Appeal, RequestDetail, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
+import type { Access, AdminUser, Appeal, ChatMessage, ChatThread, ChatThreadType, ChatUnread, RequestDetail, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
   GpsDriver, ImportBatch, ImportResult, LocationStatus, Region, Role, Shift, SituationEvent, SituationLevel, User, Vehicle } from "@/types";
 
 export const gpsApi = {
@@ -159,4 +159,21 @@ export const statsApi = {
     a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   },
+};
+
+export const chatApi = {
+  thread: (type: ChatThreadType, id: number, before_id?: number) =>
+    api.get<ChatThread>(`/chat/${type}/${id}`, { params: { before_id } }).then((r) => r.data),
+  sendText: (type: ChatThreadType, id: number, text: string) => api.post<ChatMessage>(`/chat/${type}/${id}/text`, { text }).then((r) => r.data),
+  sendVoice: (type: ChatThreadType, id: number, blob: Blob, duration: number) => {
+    const fd = new FormData();
+    const ext = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "m4a" : "webm";
+    fd.append("audio", blob, `voice.${ext}`);
+    fd.append("duration", String(duration));
+    return api.post<ChatMessage>(`/chat/${type}/${id}/voice`, fd, { timeout: 60_000 }).then((r) => r.data);
+  },
+  read: (type: ChatThreadType, id: number) => api.post(`/chat/${type}/${id}/read`),
+  unread: () => api.get<ChatUnread>("/chat/unread").then((r) => r.data),
+  /** Audio tab rejimida ham (Bearer) ishlashi uchun axios orqali blob bo'lib olinadi */
+  audio: (messageId: number) => api.get<Blob>(`/chat/audio/${messageId}`, { responseType: "blob" }).then((r) => r.data),
 };

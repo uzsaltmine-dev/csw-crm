@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.v1 import admin, auth, callcenter, customers, driver, gps, situation
+from app.api.v1 import admin, auth, callcenter, chat, customers, driver, gps, situation
 from app.core.config import get_settings
 from app.core.errors import AppError, app_error_handler
 from app.middleware import CsrfHeaderMiddleware, RequestContextMiddleware
@@ -20,9 +20,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger("csw")
 
 
-async def _purge_situation_daily() -> None:
-    """Vaziyat jurnalidan 90 kundan eski hodisalarni sutkada bir marta o'chiradi."""
+async def _purge_situation_daily(storage) -> None:
+    """Sutkada bir marta: Vaziyat jurnalidan va yozishmadagi ovozli xabarlardan 90 kundan eskilarini o'chiradi."""
     from app.db.session import SessionLocal
+    from app.services.chat import purge_voice
     from app.services.situation import purge_old
     while True:
         try:
@@ -32,6 +33,13 @@ async def _purge_situation_daily() -> None:
                 log.info("situation: %s ta eski hodisa o'chirildi", n)
         except Exception:  # noqa: BLE001 — tozalash xatosi ilovani to'xtatmasin
             log.exception("situation purge failed")
+        try:
+            async with SessionLocal() as db:
+                n = await purge_voice(db, storage)
+            if n:
+                log.info("chat: %s ta eski ovozli xabar audiosi o'chirildi", n)
+        except Exception:  # noqa: BLE001
+            log.exception("chat voice purge failed")
         await asyncio.sleep(24 * 3600)
 
 
@@ -56,7 +64,7 @@ def create_app(storage=None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         app.state.storage = storage or (MemoryStorage() if s.storage_backend == "memory" else MinioStorage(s))
-        purge = asyncio.create_task(_purge_situation_daily())
+        purge = asyncio.create_task(_purge_situation_daily(app.state.storage))
         overdue = asyncio.create_task(_overdue_watch())
         yield
         purge.cancel()
@@ -68,7 +76,7 @@ def create_app(storage=None) -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(CORSMiddleware, allow_origins=s.cors_list, allow_credentials=True,
                        allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Request-ID"])
-    for r in (auth.router, driver.router, gps.router, admin.router, customers.router, situation.router, callcenter.router):
+    for r in (auth.router, driver.router, gps.router, admin.router, customers.router, situation.router, callcenter.router, chat.router):
         app.include_router(r, prefix="/api/v1")
 
     @app.get("/api/health", tags=["system"])

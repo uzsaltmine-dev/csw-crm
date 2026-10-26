@@ -7,6 +7,7 @@ from app.core.config import Settings
 class Storage(Protocol):
     def put(self, key: str, data: bytes, content_type: str) -> None: ...
     def get(self, key: str) -> bytes: ...
+    def delete(self, key: str) -> None: ...
 
 
 class MinioStorage:
@@ -35,6 +36,10 @@ class MinioStorage:
             resp.close()
             resp.release_conn()
 
+    def delete(self, key: str) -> None:
+        self._ensure_bucket()
+        self.client.remove_object(self.bucket, key)
+
 
 class MemoryStorage:
     """Testlar va lokal tajriba uchun."""
@@ -47,3 +52,6 @@ class MemoryStorage:
 
     def get(self, key: str) -> bytes:
         return self.objects[key][0]
+
+    def delete(self, key: str) -> None:
+        self.objects.pop(key, None)
