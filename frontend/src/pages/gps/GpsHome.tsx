@@ -4,6 +4,7 @@ import { gpsApi, requestsApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
 import { useOnline } from "@/hooks/useOnline";
 import { useI18n } from "@/i18n/I18nContext";
+import { ChatButton } from "@/components/Chat";
 import { toast } from "@/lib/alerts";
 import { formatDateTime } from "@/lib/format";
 import { getSocket } from "@/lib/socket";
@@ -142,6 +143,7 @@ export function GpsHome() {
               </Select>
               <Button variant="contained" disabled={busy || !online || !pickDriver[r.id] || r.customer.missing_fields.length > 0}
                 onClick={() => run(async () => { const res = await gpsApi.assign(r.id, pickDriver[r.id]); return t("assigned_ok", { n: res.naryad_no ?? "" }); })}>{t("assign")}</Button>
+              <ChatButton type="request" id={r.id} />
             </Stack>
           ))}
         </Stack>

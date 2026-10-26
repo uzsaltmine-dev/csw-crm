@@ -15,6 +15,7 @@ MODULES: dict[str, list[str]] = {
     "requests": ["view", "create", "cancel"],
     "appeals": ["view", "create", "review"],
     "stats": ["view"],
+    "chat": ["view", "write"],
 }
 ALL_CODES: frozenset[str] = frozenset(f"{m}.{a}" for m, actions in MODULES.items() for a in actions)
 
@@ -22,11 +23,12 @@ ALL_CODES: frozenset[str] = frozenset(f"{m}.{a}" for m, actions in MODULES.items
 ROLE_TEMPLATES: dict[Role, list[str]] = {
     Role.admin: [],
     Role.manager: ["customers.view", "customers.location_confirm", "staff.view", "vehicles.view", "settings.view",
-                   "requests.view", "stats.view"],
-    Role.legal: ["customers.view", "customers.create", "customers.edit", "customers.contract", "appeals.view", "appeals.review"],
-    Role.gps: ["customers.view", "requests.view"],
-    Role.operator: ["customers.view", "requests.view", "requests.create", "appeals.view", "appeals.create"],
-    Role.driver: [],
+                   "requests.view", "stats.view", "chat.view", "chat.write"],
+    Role.legal: ["customers.view", "customers.create", "customers.edit", "customers.contract", "appeals.view", "appeals.review",
+                 "chat.view", "chat.write"],
+    Role.gps: ["customers.view", "requests.view", "chat.view", "chat.write"],
+    Role.operator: ["customers.view", "requests.view", "requests.create", "appeals.view", "appeals.create", "chat.view", "chat.write"],
+    Role.driver: ["chat.view", "chat.write"],
 }
 
 # Manager o'z doirasida boshqara oladigan rollar ("o'z xodimlari")

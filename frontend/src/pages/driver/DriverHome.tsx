@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Alert, Button, Card, CardActionArea, CardContent, Chip, Stack, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useI18n } from "@/i18n/I18nContext";
+import { ChatButton } from "@/components/Chat";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { refreshDriver } from "@/store/driverSlice";
 import { ShiftEndDialog } from "./ShiftEndDialog";
@@ -44,6 +45,9 @@ export function DriverHome() {
               <Typography variant="body2" sx={{ fontFamily: "monospace" }}>{task.naryad_no} · {task.number}</Typography>
             </CardContent>
           </CardActionArea>
+          <Stack direction="row" justifyContent="flex-end" sx={{ px: 1.5, pb: 1.5 }}>
+            <ChatButton type="request" id={task.id} size="large" />
+          </Stack>
         </Card>
       ))}
       <ShiftEndDialog shift={shift} open={ending} onClose={() => setEnding(false)} />

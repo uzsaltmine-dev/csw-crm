@@ -5,6 +5,7 @@ import { appealsApi, type ContractCreate } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
 import { useCan } from "@/hooks/useCan";
 import { useI18n } from "@/i18n/I18nContext";
+import { ChatButton } from "@/components/Chat";
 import type { MessageKey } from "@/i18n/messages";
 import { toast } from "@/lib/alerts";
 import { formatDateTime } from "@/lib/format";
@@ -59,7 +60,10 @@ export function AppealsTab({ districts }: RefData) {
               <Typography variant="caption" color="text.secondary">{formatDateTime(new Date(a.created_at + "Z"))}{a.note && ` — ${a.note}`}</Typography>
               {a.reject_reason && <Typography variant="body2" color="error">{a.reject_reason}</Typography>}
             </Box>
-            {a.status === "new" && can("appeals.review") && <Button variant="contained" onClick={() => setOpen(a)}>{t("review_appeal")}</Button>}
+            <Stack direction="row" spacing={1} justifyContent="flex-end">
+              <ChatButton type="appeal" id={a.id} />
+              {a.status === "new" && can("appeals.review") && <Button variant="contained" onClick={() => setOpen(a)}>{t("review_appeal")}</Button>}
+            </Stack>
           </Box>
         ))}
       </Stack>

@@ -257,3 +257,36 @@ export interface SituationEvent {
   created_at: string;
   resolved?: boolean;
 }
+
+export type ChatThreadType = "request" | "appeal";
+export interface ChatMessage {
+  id: number;
+  thread_type: ChatThreadType;
+  thread_id: number;
+  author_id: number;
+  author_name: string;
+  author_role: Role | null;
+  kind: "text" | "voice";
+  text: string | null;
+  duration_s: number | null;
+  expired: boolean;
+  has_audio: boolean;
+  created_at: string;
+}
+export interface ChatThread {
+  thread_type: ChatThreadType;
+  thread_id: number;
+  number: string | null;
+  title: string;
+  closed: boolean;
+  can_write: boolean;
+  appeal_id: number | null;
+  has_more: boolean;
+  items: ChatMessage[];
+}
+export interface ChatUnreadThread { thread_type: ChatThreadType; thread_id: number; number: string | null; title: string; district_id: number; count: number; last_id: number }
+export interface ChatUnread { total: number; threads: ChatUnreadThread[] }
+/** Socket "chat:message": xabar + yozishma haqida qisqa ma'lumot */
+export interface ChatEvent extends ChatMessage {
+  thread: { type: ChatThreadType; id: number; number: string | null; title: string; district_id: number; request_id: number | null };
+}

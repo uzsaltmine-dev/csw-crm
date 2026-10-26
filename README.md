@@ -142,3 +142,14 @@ API'ni Postman bilan sinash: `Authorization: Bearer <token>` sarlavhasi bilan CS
   karta + holatlar tarixi; `requests.cancel` bo'lsa yangi arizani sabab bilan bekor qilish.
 - **"Yangi"** — har xodim uchun alohida (`request_seen` jadvali, migratsiya 0008): arizani ochguncha/bosguncha belgilanadi.
   GPS ro'yxati eng yangisi tepada; filtrlar: Yangilar (standart), Bugun, Qayta, Muddati o'tgan, Assenizator, Barchasi.
+
+## Yozishma (PR #11)
+
+- Har ariza va murojaat ichida bitta umumiy yozishma: **matn** va **ovozli xabar** (60 soniyagacha, audio 90 kun saqlanadi,
+  keyin "saqlash muddati tugagan" bo'lib qoladi). Ruxsatlar: `chat.view`, `chat.write` (migratsiya 0009 mavjud xodimlarga beradi).
+- Kim ko'radi: admin — hammasi; manager, yurist, operator — o'z tumanlari; GPS — o'z tumanidagi arizalar; haydovchi — faqat o'ziga
+  biriktirilgan ariza. Murojaat yozishmasini GPS va haydovchi ko'rmaydi; murojaat ariza bo'lib ochilsa, uning yozishmasi ariza
+  yozishmasining boshida ko'rinadi.
+- Ariza yoki murojaat yopilgach — faqat o'qish (manager va admin yoza oladi).
+- Navbarda o'qilmaganlar soni, boshqa xodim yozsa jonli toast ("Ochish"). Socket xabarlari faqat ko'rish huquqi borlarga
+  (`user:{id}` xonasi). Mikrofon brauzerda faqat HTTPS (yoki localhost) orqali ishlaydi.

@@ -3,6 +3,7 @@ import { Alert, Box, Button, Chip, List, ListItemButton, ListItemText, MenuItem,
 import { adminApi, appealsApi, customersApi, requestsApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
 import { useI18n } from "@/i18n/I18nContext";
+import { ChatButton } from "@/components/Chat";
 import type { MessageKey } from "@/i18n/messages";
 import { confirmDialog, toast } from "@/lib/alerts";
 import { formatDateTime } from "@/lib/format";
@@ -168,9 +169,12 @@ export function OperatorHome() {
                   <RequestChips r={r} />
                 </Stack>
                 <Typography variant="body2">{r.customer.name}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {formatDateTime(new Date(r.created_at + "Z"))}{r.due_at && `, ${t("due_at")}: ${formatDateTime(new Date(r.due_at + "Z"))}`}
-                </Typography>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatDateTime(new Date(r.created_at + "Z"))}{r.due_at && `, ${t("due_at")}: ${formatDateTime(new Date(r.due_at + "Z"))}`}
+                  </Typography>
+                  <ChatButton type="request" id={r.id} variant="text" />
+                </Stack>
               </Box>
             ))}
           </Stack>
@@ -186,7 +190,10 @@ export function OperatorHome() {
                   <Chip size="small" color={a.status === "accepted" ? "success" : a.status === "rejected" ? "default" : "warning"}
                     label={t(`ap_${a.status}` as MessageKey)} />
                 </Stack>
-                <Typography variant="body2">{a.org_name}</Typography>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                  <Typography variant="body2">{a.org_name}</Typography>
+                  <ChatButton type={a.request_id ? "request" : "appeal"} id={a.request_id ?? a.id} variant="text" />
+                </Stack>
                 {a.reject_reason && <Typography variant="caption" color="error">{a.reject_reason}</Typography>}
               </Box>
             ))}
