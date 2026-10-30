@@ -94,9 +94,11 @@ async def test_card_editing_rules(world, client_factory):
     assert c["phone"] == "+998 94 000-00-01" and c["source"] == "manual"
     r = await legal.post("/api/v1/customers", json={"name": "ЯНГИ МИЖОЗ", "district_id": da})
     assert r.json()["error"]["code"] == "customer_exists"
-    # STIR takrorlanishi mumkin (maktablar) — korxonani maxsus raqam ajratadi
+    # STIR takrorlanmaydi: "STIRni xato kiritdingiz" + qaysi korxonaga tegishli
     r = await legal.patch(f"/api/v1/customers/{c['id']}", json={"stir": "305123456"})
-    assert r.status_code == 200 and r.json()["code"] and r.json()["code"] != world["customer"].code
+    err = r.json()["error"]
+    assert r.status_code == 409 and err["code"] == "stir_taken" and "xato kiritdingiz" in err["message"]
+    assert err["details"]["customer_id"] == world["customer"].id
     r = await legal.patch(f"/api/v1/customers/{c['id']}", json={"stir": "12345"})
     assert r.status_code == 422
     assert (await manager.patch(f"/api/v1/customers/{c['id']}", json={"director": "X"})).status_code == 403
@@ -116,7 +118,7 @@ async def test_card_editing_rules(world, client_factory):
 async def _new_request(sessionmaker, customer_id: int, district_id: int, waste=WasteType.household) -> int:
     async with sessionmaker() as s:
         r = Request(customer_id=customer_id, district_id=district_id, waste_type=waste)
-        s.add(r); await s.flush(); r.number = f"AR-{r.id:06d}"
+        s.add(r); await s.flush(); r.number = f"M-{r.id:06d}"
         await s.commit()
         return r.id
 
@@ -129,8 +131,8 @@ async def test_incomplete_customer_blocks_assignment_then_first_visit_flow(world
     rid = await _new_request(sessionmaker, cust["id"], world["districts"]["a"], WasteType.septic)
     await schedule_driver(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
 
-    listed = next(r for r in (await gps.get("/api/v1/gps/requests")).json() if r["id"] == rid)
-    assert listed["waste_type"] == "septic" and listed["customer"]["missing_fields"] == ["contract"]
+    # Shartnomasiz — GPS ro'yxatida ko'rinmaydi
+    assert rid not in [r["id"] for r in (await gps.get("/api/v1/gps/requests")).json()]
     r = await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"vehicle_id": world["vehicles"]["v1"]})
     assert r.status_code == 409 and r.json()["error"]["code"] == "customer_incomplete"
 
@@ -141,6 +143,8 @@ async def test_incomplete_customer_blocks_assignment_then_first_visit_flow(world
     ct = {"number": "SH-NEW", "type": "per_trip", "valid_from": str(date.today()), "valid_to": str(date.today() + timedelta(days=90))}
     card = (await legal.post(f"/api/v1/customers/{cust['id']}/contracts", json=ct)).json()
     assert card["missing_fields"] == [] and len(card["contracts"]) == 2
+    listed = next(r for r in (await gps.get("/api/v1/gps/requests")).json() if r["id"] == rid)
+    assert listed["waste_type"] == "septic"
     r = await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"vehicle_id": world["vehicles"]["v1"]})
     assert r.status_code == 200, r.text
     assert r.json()["contract"]["number"] == "SH-NEW"

@@ -15,7 +15,7 @@ Foydalanuvchi bilan 2026-10-30 da grill-me savollari orqali kelishildi. PR #12 d
 - ✅ **Mashina dropdowni.** GPS tumani mashinalari ko'rsatiladi. Bugun yuridik bo'lim uchun ishlayotganlar yuqorida turadi, ichida korxonagacha masofa bo'yicha o'sish va kamayish tartibi bor. Haydovchi jadvaldan olinadi.
 - ✅ **Mashina joylashuvi** tashqi GPS-monitoring tizimidan keladi. Hozircha faqat API joyi tayyor: `POST /api/v1/integrations/vehicle-positions`, `GET/PUT /api/v1/integrations/schedule`, `X-Api-Key` = `INTEGRATION_API_KEY`. Haydovchi plansheti ham joylashuv yuboradi.
 - ✅ **Korxona maxsus raqami** STIR o'rniga ishlatiladi. Format: 3 ta tasodifiy harf va 2 ta raqam, chiziqchasiz (`KTR47`). O, I va Q harflari yo'q. Raqam doimiy va avtomatik beriladi.
-- ✅ **STIR takrorlanishi mumkin**, chunki maktablar kabi tashkilotlarda u bir xil bo'ladi.
+- ✅ ~~STIR takrorlanishi mumkin~~ → PR #13: **STIR unikal** (foydalanuvchi qarori), band bo'lsa «STIRni xato kiritdingiz». STIR orqali Soliq API'dan ma'lumot — keyin.
 - ✅ **Buyurtma varaqasi** GPS mashina biriktirganda yaratiladi.
   - Ochiq 7 xonali raqami bor: hamma ko'radi va u bilan qidiradi.
   - Maxfiy 7 belgili tasdiq kodi faqat chop etilgan PDF'da bo'ladi, ikkala qismda ham. Ekranda va API'da kod yo'q, bazada faqat HMAC xeshi saqlanadi.
@@ -43,3 +43,8 @@ Foydalanuvchi bilan 2026-10-30 da grill-me savollari orqali kelishildi. PR #12 d
   - sariq kartada debitor va kreditor pillari.
 - ⏳ Haydovchilar uchun Telegram bot (planshetdagi jarayon bilan bir xil). PR #14 dan keyin.
 - ⏳ O'zimizning GPS-monitoring tizimi (GPS paneli ichida) va jismoniy abonentlar bilan ishlash. Yuridik bo'lim qismi tugagach boshlanadi.
+
+## PR #13 qarorlari (2026-10-31)
+- «Ariza» → «murojaat», raqamlar `M-`. Admin/manager uchun yagona «Murojaatlar» ro'yxati (4 rang, 12/72/144 soat panellari).
+- Operator yangi korxonasi: telefon, STIR, kutib oluvchi → darhol maxsus raqam + SMS (Eskiz.uz); legal navbatiga.
+- Debitor/kreditor hozircha tizim ichida (narx × kub, qo'lda to'lovlar) — buxgalteriya tizimi API'si tayyor bo'lgach o'tkaziladi (PR #14).

@@ -44,7 +44,7 @@ function Half({ p, copy, autofill }: { p: Paper; copy: string; autofill?: { volu
       <Ln label="Tashkilot nomi:" value={p.customer.name} />
       <Stack direction="row" spacing={2}>
         <Ln label="Maxsus raqami:" value={p.customer.code} w="50%" />
-        <Ln label="Ariza:" value={p.request_number} w="50%" />
+        <Ln label="Murojaat:" value={p.request_number} w="50%" />
       </Stack>
       <Ln label="Manzili:" value={p.customer.address} />
       <Ln label="Olib chiqilgan chiqindi miqdori:" value={autofill?.volume ? `${autofill.volume} metr kub` : ""} />

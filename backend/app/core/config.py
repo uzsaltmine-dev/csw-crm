@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     # Buyurtma varaqasi maxfiy kodining HMAC kaliti (bo'sh bo'lsa jwt_secret'dan olinadi)
     order_code_secret: str = ""
 
+    # SMS (Eskiz.uz). Bo'sh bo'lsa SMS yuborilmaydi — faqat jurnalga yoziladi (demo)
+    eskiz_email: str = ""
+    eskiz_password: str = ""
+    sms_sender: str = "4546"
+
     static_dir: str | None = None  # demo: frontend build'i shu papkadan beriladi (bitta konteyner)
     storage_backend: str = "minio"  # "memory" — MinIO'siz lokal ishlab chiqish uchun (fayllar xotirada)
     minio_endpoint: str = "localhost:9000"

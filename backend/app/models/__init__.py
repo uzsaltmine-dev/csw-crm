@@ -138,8 +138,8 @@ class Customer(TimestampMixin, Base):
     # Korxona maxsus raqami: 3 harf + 2 raqam (KTR47). STIR o'rniga — maktablar kabi tashkilotlarda STIR bir xil bo'lishi mumkin.
     # Yangi korxonaga avtomatik beriladi (app.services.customer_code), o'zgarmaydi.
     code: Mapped[str | None] = mapped_column(String(5), unique=True)
-    # STIR Excel'da yo'q — keyin yuridik bo'lim to'ldiradi; bir nechta tashkilotda bir xil bo'lishi mumkin
-    stir: Mapped[str | None] = mapped_column(String(9), index=True)
+    # STIR Excel'da yo'q — keyin yuridik bo'lim to'ldiradi; takrorlanmaydi (keyin Soliq API orqali tekshiriladi)
+    stir: Mapped[str | None] = mapped_column(String(9), unique=True)
     name: Mapped[str] = mapped_column(String(200))
     name_key: Mapped[str] = mapped_column(String(200))  # birlashtirish uchun normallashtirilgan nom
     activity_type: Mapped[str | None] = mapped_column(String(100))
@@ -242,7 +242,8 @@ class Request(TimestampMixin, Base):
         """Kartaning rangi: red — mashina biriktirilmagan, yellow — chiqindi olinishi kutilmoqda, green — bajarilgan."""
         st = self.status.value
         if st == "new":
-            return "red"
+            from app.db.base import utcnow
+            return "black" if self.created_at and (utcnow() - self.created_at).total_seconds() >= 72 * 3600 else "red"
         if st in ("done", "suspect"):
             return "green"
         if st == "cancelled":

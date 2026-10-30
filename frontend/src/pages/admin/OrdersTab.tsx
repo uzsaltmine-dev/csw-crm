@@ -19,9 +19,11 @@ import { toast } from "@/lib/alerts";
 import { getSocket } from "@/lib/socket";
 import type { CustomerDetail, OrderPaper, RequestItem } from "@/types";
 import { AppealsTab } from "./AppealsTab";
+import { MurojaatBoard } from "./MurojaatBoard";
+import { useAppSelector } from "@/store";
 import type { RefData } from "./AdminHome";
 
-type Sub = "yellow" | "green" | "appeals";
+type Sub = "board" | "yellow" | "green" | "appeals";
 
 /**
  * Murojaatlar (legal): «Jarayonda» — sariq kartalar (mashina biriktirilgan, varaqa qaytishi kutilmoqda),
@@ -33,7 +35,11 @@ export function OrdersTab(ref: RefData) {
   const can = useCan();
   const now = useNow();
   const sound = useAlertSound();
-  const subs: Sub[] = [...(can("orders.view") || can("requests.view") ? ["yellow", "green"] as Sub[] : []), ...(can("appeals.view") ? ["appeals" as Sub] : [])];
+  const role = useAppSelector((st) => st.auth.user?.role);
+  // Admin/manager — barcha murojaatlar bitta ro'yxatda (4 rang); legal — Jarayonda / Bajarilganlar
+  const board = role === "admin" || role === "manager";
+  const subs: Sub[] = [...(board && can("requests.view") ? ["board" as Sub] : []),
+    ...(!board && (can("orders.view") || can("requests.view")) ? ["yellow", "green"] as Sub[] : []), ...(can("appeals.view") ? ["appeals" as Sub] : [])];
   const [sub, setSub] = useState<Sub>(subs[0] ?? "yellow");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
@@ -71,12 +77,13 @@ export function OrdersTab(ref: RefData) {
     <Stack spacing={2}>
       <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems={{ md: "center" }}>
         <Tabs value={sub} onChange={(_, v) => setSub(v)} sx={{ flex: 1 }}>
+          {subs.includes("board") && <Tab value="board" id="ord-tab-board" label={t("ord_board")} />}
           {subs.includes("yellow") && <Tab value="yellow" id="ord-tab-yellow"
             label={<Badge color="warning" badgeContent={yellow.length} sx={{ pr: 1.5 }}>{t("ord_yellow")}</Badge>} />}
           {subs.includes("green") && <Tab value="green" id="ord-tab-green" label={t("ord_green")} />}
           {subs.includes("appeals") && <Tab value="appeals" id="ord-tab-appeals" label={t("ord_appeals")} />}
         </Tabs>
-        {sub !== "appeals" && <TextField id="ord-search" size="small" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ord_search")}
+        {(sub === "yellow" || sub === "green") && <TextField id="ord-search" size="small" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ord_search")}
           sx={{ minWidth: 300 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }} />}
         {sub === "yellow" && <SoundToggle on={sound.on} toggle={sound.toggle} />}
       </Stack>
@@ -105,6 +112,7 @@ export function OrdersTab(ref: RefData) {
         {green.map((r) => <GreenCard key={r.id} r={r}><ChatButton type="request" id={r.id} variant="text" /></GreenCard>)}
       </Stack>}
 
+      {sub === "board" && <MurojaatBoard {...ref} />}
       {sub === "appeals" && <AppealsTab {...ref} />}
       {closing && <CloseDialog r={closing} onClose={() => setClosing(null)} onDone={() => { setClosing(null); load(); }} />}
       {contractOf && <ContractDialog customerId={contractOf} onClose={() => setContractOf(null)} />}
@@ -189,7 +197,7 @@ function CloseDialog({ r, onClose, onDone }: { r: RequestItem; onClose: () => vo
     // Kod tasdiqlangach: kub va chiqindi turi kiritilmaguncha forma umuman yopilmaydi (Esc, tashqariga bosish, tugma yo'q)
     <Dialog open disableEscapeKeyDown={step === 2 && !ready}
       onClose={() => { if (step < 2 || ready) onClose(); else toast(t("ord_fill_first"), "warning"); }} maxWidth="lg" fullWidth>
-      <DialogTitle>{t("ord_close_title", { n: form.number })} · {r.customer.name}</DialogTitle>
+      <DialogTitle>{t("ord_close_title")} · {r.customer.name}</DialogTitle>
       <DialogContent dividers id="close-dialog">
         <Stepper activeStep={step} sx={{ mb: 3 }}>
           {["ord_step_scan", "ord_step_code", "ord_step_form"].map((k) => <Step key={k}><StepLabel>{t(k as MessageKey)}</StepLabel></Step>)}

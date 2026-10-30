@@ -60,8 +60,7 @@ export function YellowCard({ r, now, children, isNew }: { r: Card; now: number; 
             <CopyValue value={r.customer.stir} label="STIR" />
           </Stack>
           <Typography variant="body2" sx={{ mt: 0.75 }}>
-            {r.number} · {t("of_no")}: <b data-form-number>{f?.number ?? "—"}</b>
-            {f && <> · {t(f.printed ? "of_is_printed" : "of_not_printed")}</>}
+            {r.number}{f && <> · {t(f.printed ? "of_is_printed" : "of_not_printed")}</>}
           </Typography>
           <Typography variant="body2" sx={{ opacity: 0.85 }}>
             🚛 {r.vehicle?.plate ?? "—"} · {r.driver_name ?? "—"} · {r.customer.address ?? ""}

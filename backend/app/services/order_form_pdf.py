@@ -89,7 +89,7 @@ def _half(c, x0, top, width, d, code, copy_label):
     _line(c, x, y, width, "Tashkilot nomi:", cust["name"])
     y -= 18
     _line(c, x, y, width * 0.48, "Maxsus raqami:", cust["code"])
-    _line(c, x + width * 0.52, y, width * 0.48, "Ariza:", d["request_number"])
+    _line(c, x + width * 0.52, y, width * 0.48, "Murojaat:", d["request_number"])
     y -= 18
     _line(c, x, y, width, "Manzili:", cust["address"])
     y -= 26

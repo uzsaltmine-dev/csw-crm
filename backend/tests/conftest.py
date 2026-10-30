@@ -65,7 +65,7 @@ async def world(sessionmaker):
         reqs = []
         for i in range(3):
             r = Request(customer_id=cust.id, contract_id=ct.id, district_id=da.id)
-            db.add(r); await db.flush(); r.number = f"AR-{r.id:06d}"; reqs.append(r)
+            db.add(r); await db.flush(); r.number = f"M-{r.id:06d}"; reqs.append(r)
         await db.commit()
         return {"users": {k: u.id for k, u in users.items()}, "vehicles": {"v1": v1.id, "v2": v2.id, "vb": vb.id},
                 "districts": {"a": da.id, "b": db_.id}, "requests": [r.id for r in reqs], "customer": cust}

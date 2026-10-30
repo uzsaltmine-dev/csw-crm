@@ -35,8 +35,8 @@ async def test_customer_code_format_unique_and_searchable(world, client_factory,
     assert all(re.fullmatch(r"[A-HJ-NPR-Z]{3}\d{2}", c) for c in codes)
     ids = []
     for i in range(30):
-        r = await legal.post("/api/v1/customers", json={"name": f"Maktab {i}", "district_id": world["districts"]["a"], "stir": "201000111"})
-        assert r.status_code == 201, r.text  # maktablarda STIR bir xil — ruxsat
+        r = await legal.post("/api/v1/customers", json={"name": f"Maktab {i}", "district_id": world["districts"]["a"], "stir": f"2010001{i:02d}"})
+        assert r.status_code == 201, r.text
         ids.append(r.json()["code"])
     assert len(set(ids)) == 30
     found = (await legal.get("/api/v1/customers", params={"q": ids[7].lower()})).json()["items"]

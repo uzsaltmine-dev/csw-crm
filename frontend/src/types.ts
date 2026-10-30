@@ -185,7 +185,7 @@ export interface DriverTask {
 }
 
 /** Uch bosqich: qizil — mashina biriktirilmagan, sariq — chiqindi olinishi kutilmoqda, yashil — bajarilgan */
-export type Stage = "red" | "yellow" | "green" | "cancelled";
+export type Stage = "red" | "black" | "yellow" | "green" | "cancelled";
 export interface OrderFormBrief {
   id: number;
   number: string;

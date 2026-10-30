@@ -94,7 +94,7 @@ async def seed() -> None:
                                 caller_name="Namuna qo'ng'iroq qiluvchi", caller_phone="+998 91 111-11-11")
                     db.add(r)
                     await db.flush()
-                    r.number = f"AR-{r.id:06d}"
+                    r.number = f"M-{r.id:06d}"
                     db.add(RequestEvent(request_id=r.id, status=RequestStatus.new, created_at=now, note="namunaviy ariza"))
                     if d_name == "Asaka tumani" and k == 0:
                         chat_demo = (r.id, gps)
@@ -108,7 +108,7 @@ async def seed() -> None:
                                 overdue_notified=d_name != "Asaka tumani")
                     db.add(r)
                     await db.flush()
-                    r.number = f"AR-{r.id:06d}"
+                    r.number = f"M-{r.id:06d}"
                     db.add(RequestEvent(request_id=r.id, status=RequestStatus.new, created_at=created))
                     if r.finished_at:
                         db.add(RequestEvent(request_id=r.id, status=RequestStatus.done, created_at=r.finished_at))
@@ -123,7 +123,7 @@ async def seed() -> None:
                             note="Assenizator: hojatxona chuquri to'lgan", due_at=utcnow() + timedelta(hours=72))
                 db.add(r)
                 await db.flush()
-                r.number = f"AR-{r.id:06d}"
+                r.number = f"M-{r.id:06d}"
                 db.add(RequestEvent(request_id=r.id, status=RequestStatus.new, created_at=utcnow()))
         # Call-center operatori (demo: barcha tumanlar)
         operator = User(username="operator", password_hash=pwd, full_name="Call-center operatori", role=Role.operator)
