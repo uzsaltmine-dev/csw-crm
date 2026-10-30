@@ -345,6 +345,23 @@ class OrderForm(TimestampMixin, Base):
     request: Mapped["Request"] = relationship(back_populates="order_form")
 
 
+class Payment(TimestampMixin, Base):
+    """Korxona to'lovi (kreditor tomoni). Buxgalter qo'lda yoki bank ko'chirmasidan kiritadi; o'chirilmaydi — bekor qilinadi."""
+    __tablename__ = "payments"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), index=True)
+    paid_on: Mapped[date] = mapped_column(Date, index=True)
+    amount: Mapped[float] = mapped_column(Numeric(14, 2))
+    doc_no: Mapped[str | None] = mapped_column(String(50))
+    note: Mapped[str | None] = mapped_column(String(255))
+    source: Mapped[str] = mapped_column(String(10), default="manual")  # "manual" | "import"
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime)
+    cancelled_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    cancel_reason: Mapped[str | None] = mapped_column(String(255))
+    customer: Mapped["Customer"] = relationship()
+
+
 class ChatMessage(TimestampMixin, Base):
     """Ariza yoki murojaat ichidagi yozishma: matn yoki ovozli xabar (audio 90 kun saqlanadi)."""
     __tablename__ = "chat_messages"
@@ -457,7 +474,7 @@ class SituationRead(Base):
 __all__ = [
     "Base", "Region", "Provider", "District", "User", "Vehicle", "Shift", "Customer", "CustomerContact", "ImportBatch", "Contract",
     "Request", "NaryadCounter", "Act", "ActFile", "RequestEvent", "AppSetting", "SituationEvent", "SituationRead",
-    "UserDistrict", "UserPermission", "Appeal", "RequestSeen", "ChatMessage", "ChatRead", "WorkSchedule", "VehiclePosition", "OrderForm",
+    "UserDistrict", "UserPermission", "Appeal", "RequestSeen", "ChatMessage", "ChatRead", "WorkSchedule", "VehiclePosition", "OrderForm", "Payment",
 ]
 
 

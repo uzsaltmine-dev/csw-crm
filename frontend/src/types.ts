@@ -1,4 +1,4 @@
-export type Role = "admin" | "manager" | "operator" | "gps" | "legal" | "driver";
+export type Role = "admin" | "manager" | "operator" | "gps" | "legal" | "driver" | "accountant";
 export type ShiftStatus = "opened" | "active" | "closed";
 export type RequestStatus = "new" | "assigned" | "enroute" | "onsite" | "done" | "suspect" | "failed" | "cancelled";
 export type FileKind = "before" | "after" | "face" | "sign";
@@ -334,3 +334,13 @@ export interface ChatUnread { total: number; threads: ChatUnreadThread[] }
 export interface ChatEvent extends ChatMessage {
   thread: { type: ChatThreadType; id: number; number: string | null; title: string; district_id: number; request_id: number | null };
 }
+
+export interface CompanyRow { customer_id: number; name: string; code: string | null; district_id: number; debit: number; credit: number;
+  balance: number; volume_m3: number; green_count: number }
+export interface CompanyPeriod { from: string; to: string; opening: number; charged: number; paid: number; closing: number; debit: number; credit: number }
+export interface CompanyCompare { customer: { id: number; name: string; code: string | null; stir: string | null }; periods: CompanyPeriod[];
+  months: { month: string; charged: number; paid: number; closing: number }[]; now: CompanyRow }
+export interface GreenItem { id: number; number: string | null; day: string; volume_m3: number; waste_type: string; plate: string | null;
+  driver_name: string | null; closed_via: "form" | "act" | null; status: string; contract: string | null; amount: number }
+export interface PaymentItem { id: number; customer_id: number; customer_name: string | null; code: string | null; paid_on: string; amount: number;
+  doc_no: string | null; note: string | null; source: "manual" | "import"; created_at: string; cancelled: boolean; cancel_reason: string | null }

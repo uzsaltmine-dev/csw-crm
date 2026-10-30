@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Box, Button, ButtonBase, Chip, InputAdornment, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import { Box, Button, ButtonBase, Chip, InputAdornment, MenuItem, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import { useAppSelector } from "@/store";
 import LockOpenIcon from "@mui/icons-material/LockOpen";
 import PrintIcon from "@mui/icons-material/Print";
 import SearchIcon from "@mui/icons-material/Search";
@@ -33,6 +34,8 @@ export function MurojaatBoard({ districts }: RefData) {
   const [hours, setHours] = useState<(typeof HOURS)[number]>(72);
   const [sum, setSum] = useState<Record<Color, number> | null>(null);
   const [color, setColor] = useState<Color | "">("");
+  const role = useAppSelector((st) => st.auth.user?.role);
+  const [district, setDistrict] = useState<number | "">("");
   const [q, setQ] = useState("");
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<RequestItem[]>([]);
@@ -45,11 +48,12 @@ export function MurojaatBoard({ districts }: RefData) {
   useEffect(() => { const h = window.setTimeout(() => setQuery(q.trim()), 300); return () => window.clearTimeout(h); }, [q]);
   const load = useCallback(async () => {
     try {
-      const [s, l] = await Promise.all([requestsApi.summary(hours),
-        requestsApi.list({ stage: color || undefined, q: query || undefined, limit })]);
+      // Soat va tuman filtrlari panellarga ham, ro'yxatga ham birga amal qiladi
+      const [s, l] = await Promise.all([requestsApi.summary(hours, district || undefined),
+        requestsApi.list({ hours, district_id: district || undefined, stage: color || undefined, q: query || undefined, limit })]);
       setSum(s); setItems(l.items.filter((r) => r.stage !== "cancelled")); setTotal(l.total);
     } catch (e) { fail(e); }
-  }, [hours, color, query, limit, fail]);
+  }, [hours, district, color, query, limit, fail]);
   useEffect(() => {
     load();
     const s = getSocket();
@@ -58,15 +62,22 @@ export function MurojaatBoard({ districts }: RefData) {
   }, [load]);
 
   const act = async (fn: () => Promise<unknown>, msg: string) => { try { await fn(); toast(msg); load(); } catch (e) { fail(e); } };
-  const district = (id: number) => districts.find((d) => d.id === id)?.name ?? "";
+  const districtName = (id: number) => districts.find((d) => d.id === id)?.name ?? "";
 
   return (
     <Stack spacing={2} id="board">
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} justifyContent="space-between">
-        <Typography variant="subtitle1" fontWeight={600}>{t("board_summary", { h: hours })}</Typography>
-        <ToggleButtonGroup size="small" exclusive value={hours} onChange={(_, v) => v && setHours(v)} id="board-hours">
-          {HOURS.map((h) => <ToggleButton key={h} value={h} sx={{ px: 2 }}>{t("board_hours", { h })}</ToggleButton>)}
-        </ToggleButtonGroup>
+        <Typography variant="subtitle1" fontWeight={600}>{t("board_summary", { h: hours })}{district ? ` · ${districts.find((d) => d.id === district)?.name ?? ""}` : ""}</Typography>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          {role === "admin" && <TextField id="board-district" select size="small" label={t("district")} value={district} sx={{ minWidth: 200 }}
+            onChange={(e) => setDistrict(e.target.value === "" ? "" : Number(e.target.value))}>
+            <MenuItem value="">{t("all_districts")}</MenuItem>
+            {districts.filter((d) => d.is_active).map((d) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}
+          </TextField>}
+          <ToggleButtonGroup size="small" exclusive value={hours} onChange={(_, v) => v && setHours(v)} id="board-hours">
+            {HOURS.map((h) => <ToggleButton key={h} value={h} sx={{ px: 2 }}>{t("board_hours", { h })}</ToggleButton>)}
+          </ToggleButtonGroup>
+        </Stack>
       </Stack>
       <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" } }}>
         {COLORS.map((c) => (
@@ -94,7 +105,7 @@ export function MurojaatBoard({ districts }: RefData) {
         {items.map((r) => {
           const more = <Button size="small" variant="outlined" color="inherit" onClick={() => setOpen(r.id)}>{t("board_details")}</Button>;
           const f = r.order_form;
-          const dname = <Typography variant="caption" sx={{ display: "block", opacity: 0.85, mb: 0.75 }}>{district(r.district_id)}</Typography>;
+          const dname = <Typography variant="caption" sx={{ display: "block", opacity: 0.85, mb: 0.75 }}>{districtName(r.district_id)}</Typography>;
           if (r.stage === "red" || r.stage === "black") {
             return <RedCard key={r.id} r={r} now={now}>{dname}<Stack direction="row" spacing={1} sx={{ "& .MuiButton-root": { color: "#fff", borderColor: "rgba(255,255,255,.6)" } }}>
               {more}<ChatButton type="request" id={r.id} /></Stack></RedCard>;

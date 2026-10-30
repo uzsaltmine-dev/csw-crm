@@ -183,3 +183,16 @@ Batafsil kelishuvlar: `docs/plans/three-stage-flow.md`.
 - **STIR yana unikal**: band bo'lsa «Siz STIRni xato kiritdingiz — bu STIR «X» korxonasiga tegishli» va shu korxonaga o'tish.
 - Shartnomasiz korxonalar murojaatlari GPS'ga ko'rinmaydi. GPS socket xonasi tuman bo'yicha (yangi qizil karta jonli tushadi).
 - Sariq kartalarda buyurtma varaqasi raqami ko'rsatilmaydi (faqat qidiruv uchun).
+
+## Korxonalar statistikasi va buxgalteriya (PR #14)
+
+- **Legal → Korxonalar** (faqat statistika): yashil panel — shartnomasi bor korxonalar soni (bosilsa jadvalga o'tadi); jadval:
+  nom, maxsus raqam, debitor, kreditor, jami chiqindi (har ustun bo'yicha saralash). Har son bosilsa `/admin/korxona/:id/:view`:
+  debitor/kreditor — ikki davrni solishtirish (tayyor davrlar yoki sanalar, oyma-oy diagramma); kub — barcha yashil murojaatlar.
+- Tablar qatorining o'ng chetida **«Yangi shartnoma»** (PR #15 da to'liq jarayon: tekshirish, qog'oz shartnoma, buxgalter tasdig'i).
+- **Hisob** (vaqtincha tizim ichida, `app/services/billing.py`): har reys — narx × yashil; hajm — narx × kub; oylik — har oy;
+  bir martalik — bir marta. Qoldiq = hisoblangan − to'langan (+ debitor, − kreditor).
+- **Buxgalter** roli (demo: `buxgalter`): to'lovlar — qo'lda, bekor qilish (o'chirilmaydi), bank ko'chirmasi importi (avval sinov).
+  Ruxsatlar: `accounting.view` (legal, manager), `accounting.payments` (buxgalter). Migratsiya 0012.
+- Admin «Murojaatlar»: tuman dropdowni 12/72/144 soat bilan birga ishlaydi. GPS'da «Assenizator» filtri olib tashlandi.
+  Statistika: kartochkalar → tumanlar jadvali → diagrammalar.

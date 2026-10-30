@@ -1,7 +1,7 @@
 import { api } from "./client";
 import { clearTokens, saveTokens, type Tokens } from "@/lib/session";
 import { closeSocket } from "@/lib/socket";
-import type { Access, AdminUser, Appeal, OrderFormBrief, OrderPaper, ScheduleDay, ScheduleRow, Service, VehicleOption, ChatMessage, ChatThread, ChatThreadType, ChatUnread, RequestDetail, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
+import type { CompanyCompare, CompanyRow, GreenItem, PaymentItem, Access, AdminUser, Appeal, OrderFormBrief, OrderPaper, ScheduleDay, ScheduleRow, Service, VehicleOption, ChatMessage, ChatThread, ChatThreadType, ChatUnread, RequestDetail, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
   ImportBatch, ImportResult, LocationStatus, Region, Role, SituationEvent, SituationLevel, User } from "@/types";
 
 export const gpsApi = {
@@ -118,9 +118,9 @@ export type AppealCreate = OrderFields & { district_id: number; org_name: string
 export const requestsApi = {
   detail: (id: number) => api.get<RequestDetail>(`/requests/${id}`).then((r) => r.data),
   markSeen: (request_ids: number[]) => api.post("/requests/seen", { request_ids }),
-  summary: (hours: number) => api.get<{ hours: number; red: number; black: number; yellow: number; green: number }>("/requests-summary",
-    { params: { hours } }).then((r) => r.data),
-  list: (params: { stage?: "red" | "black" | "yellow" | "green"; mine?: boolean; overdue?: boolean; repeat?: boolean; status?: string; district_id?: number; waste_type?: string;
+  summary: (hours: number, district_id?: number) => api.get<{ hours: number; red: number; black: number; yellow: number; green: number }>(
+    "/requests-summary", { params: { hours, district_id } }).then((r) => r.data),
+  list: (params: { hours?: number; stage?: "red" | "black" | "yellow" | "green"; mine?: boolean; overdue?: boolean; repeat?: boolean; status?: string; district_id?: number; waste_type?: string;
     date_from?: string; date_to?: string; q?: string; limit?: number; offset?: number }) =>
     api.get<{ items: RequestItem[]; total: number }>("/requests", { params }).then((r) => r.data),
   openFor: (customer_id: number) => api.get<RequestItem[]>("/requests/open", { params: { customer_id } }).then((r) => r.data),
@@ -194,4 +194,25 @@ export const ordersApi = {
   verify: (id: number, code: string) => api.post<OrderPaper>(`/order-forms/${id}/verify`, { code }).then((r) => r.data),
   close: (id: number, volume_m3: number, waste_kind: "solid" | "liquid") =>
     api.post<RequestItem>(`/order-forms/${id}/close`, { volume_m3, waste_kind }).then((r) => r.data),
+};
+
+export const accountingApi = {
+  companies: (q?: string) => api.get<{ total_contracted: number; total: number; items: CompanyRow[];
+    sum: { debit: number; credit: number; volume_m3: number } }>("/accounting/companies", { params: { q } }).then((r) => r.data),
+  compare: (id: number, a: [string, string], b: [string, string]) => api.get<CompanyCompare>(`/accounting/companies/${id}/compare`,
+    { params: { a_from: a[0], a_to: a[1], b_from: b[0], b_to: b[1] } }).then((r) => r.data),
+  green: (id: number) => api.get<{ customer: CompanyCompare["customer"]; items: GreenItem[]; total_m3: number; count: number }>(
+    `/accounting/companies/${id}/green`).then((r) => r.data),
+  payments: (params: { q?: string; date_from?: string; date_to?: string; customer_id?: number; limit?: number; offset?: number }) =>
+    api.get<{ items: PaymentItem[]; total: number; sum: number }>("/accounting/payments", { params }).then((r) => r.data),
+  addPayment: (body: { customer_id: number; paid_on: string; amount: number; doc_no?: string | null; note?: string | null }) =>
+    api.post<PaymentItem>("/accounting/payments", body).then((r) => r.data),
+  cancelPayment: (id: number, reason: string) => api.post<PaymentItem>(`/accounting/payments/${id}/cancel`, { reason }).then((r) => r.data),
+  importPayments: (file: File, dry_run: boolean) => {
+    const fd = new FormData();
+    fd.append("file", file, file.name);
+    return api.post<{ dry_run: boolean; ok: number; total: number; errors: { line: number; error: string; value: string }[];
+      rows: { line: number; name: string; code: string; paid_on: string; amount: number; doc_no: string | null }[] }>(
+      "/accounting/payments/import", fd, { params: { dry_run }, timeout: 120_000 }).then((r) => r.data);
+  },
 };

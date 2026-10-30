@@ -8,6 +8,7 @@ class Role(str, Enum):
     gps = "gps"                # yuridik bo'lim GPS xodimi
     legal = "legal"            # yuridik bo'lim xodimi (shartnomachi)
     driver = "driver"
+    accountant = "accountant"  # buxgalter: to'lovlar, shartnoma tasdig'i
 
 
 class ShiftStatus(str, Enum):
