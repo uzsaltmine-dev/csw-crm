@@ -33,12 +33,12 @@ def _local_day(d: date | None, plus_days: int = 0) -> datetime | None:
 
 @router.get("/requests", response_model=RequestPage)
 async def requests(district_id: int | None = None, status: RequestStatus | None = None, mine: bool = False, overdue: bool = False,
-                   repeat: bool = False, waste_type: WasteType | None = None, date_from: date | None = None, date_to: date | None = None,
+                   repeat: bool = False, stage: str | None = Query(None, pattern="^(red|yellow|green)$"), waste_type: WasteType | None = None, date_from: date | None = None, date_to: date | None = None,
                    q: str | None = Query(None, max_length=100), limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
                    user: User = perm("requests.view"), db: AsyncSession = DB):
     rows, total = await svc.list_requests(db, user, district_id=district_id, status=status, mine=mine, overdue=overdue, q=q,
                                           limit=limit, offset=offset, date_from=_local_day(date_from), date_to=_local_day(date_to, 1),
-                                          waste_type=waste_type, repeat=repeat)
+                                          waste_type=waste_type, repeat=repeat, stage=stage)
     seen = await req_repo.seen_ids(db, user.id, [r.id for r in rows])
     items = []
     for r in rows:

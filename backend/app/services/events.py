@@ -12,5 +12,5 @@ async def broadcast(req: Request) -> None:
     """Commit'dan keyin chaqiriladi: Manager, GPS xodimi va haydovchi ekranlari yangilanadi."""
     await realtime.emit_request_updated({
         "id": req.id, "number": req.number, "status": req.status.value,
-        "district_id": req.district_id, "driver_id": req.driver_id, "naryad_no": req.naryad_no,
+        "district_id": req.district_id, "driver_id": req.driver_id, "naryad_no": req.naryad_no, "stage": req.stage,
     })

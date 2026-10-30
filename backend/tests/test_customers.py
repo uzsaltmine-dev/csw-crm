@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 
 from app.models import Customer, ImportBatch, Request
 from app.models.enums import WasteType
-from tests.helpers import FAR, NEAR, fill_act, open_and_start_shift
+from tests.helpers import FAR, NEAR, fill_act, schedule_driver
 from tests.xlsx_factory import build
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -48,7 +48,7 @@ async def test_import_then_reimport_is_idempotent(world, client_factory, session
     c = page["items"][0]
     assert c["source"] == "excel" and c["location_status"] == "none" and c["stir"] is None and c["lat"] is None
     assert c["fixed_no"].startswith("A-") and c["fixed_no"] != "A-0101" and c["contacts_count"] == 2
-    assert set(c["missing_fields"]) == {"stir", "contract"}
+    assert c["missing_fields"] == ["contract"] and len(c["code"]) == 5  # STIR o'rniga maxsus raqam
     detail = (await admin.get(f"/api/v1/customers/{c['id']}")).json()
     assert {x["phone"] for x in detail["contacts"]} == {"+998 94 512-11-16", "+998 90 555-11-22"}
 
@@ -94,8 +94,9 @@ async def test_card_editing_rules(world, client_factory):
     assert c["phone"] == "+998 94 000-00-01" and c["source"] == "manual"
     r = await legal.post("/api/v1/customers", json={"name": "ЯНГИ МИЖОЗ", "district_id": da})
     assert r.json()["error"]["code"] == "customer_exists"
+    # STIR takrorlanishi mumkin (maktablar) — korxonani maxsus raqam ajratadi
     r = await legal.patch(f"/api/v1/customers/{c['id']}", json={"stir": "305123456"})
-    assert r.json()["error"]["code"] == "stir_taken"
+    assert r.status_code == 200 and r.json()["code"] and r.json()["code"] != world["customer"].code
     r = await legal.patch(f"/api/v1/customers/{c['id']}", json={"stir": "12345"})
     assert r.status_code == 422
     assert (await manager.patch(f"/api/v1/customers/{c['id']}", json={"director": "X"})).status_code == 403
@@ -126,24 +127,21 @@ async def test_incomplete_customer_blocks_assignment_then_first_visit_flow(world
     await _import(admin, dry_run=False)
     cust = (await admin.get("/api/v1/customers", params={"q": "Боғ"})).json()["items"][0]
     rid = await _new_request(sessionmaker, cust["id"], world["districts"]["a"], WasteType.septic)
-    await open_and_start_shift(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
+    await schedule_driver(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
 
     listed = next(r for r in (await gps.get("/api/v1/gps/requests")).json() if r["id"] == rid)
-    assert listed["waste_type"] == "septic" and set(listed["customer"]["missing_fields"]) == {"stir", "contract"}
-    r = await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"driver_id": world["users"]["driver"]})
+    assert listed["waste_type"] == "septic" and listed["customer"]["missing_fields"] == ["contract"]
+    r = await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"vehicle_id": world["vehicles"]["v1"]})
     assert r.status_code == 409 and r.json()["error"]["code"] == "customer_incomplete"
 
-    # Yuridik bo'lim STIR va shartnomani kiritadi
-    await legal.patch(f"/api/v1/customers/{cust['id']}", json={"stir": "301000111"})
-    r = await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"driver_id": world["users"]["driver"]})
-    assert r.json()["error"]["code"] == "customer_incomplete"  # shartnoma hali yo'q
+    # Yuridik bo'lim shartnomani kiritadi (STIR shart emas)
     expired = {"number": "SH-OLD", "type": "per_trip", "valid_from": "2025-01-01", "valid_to": "2025-12-31"}
     await legal.post(f"/api/v1/customers/{cust['id']}/contracts", json=expired)
-    assert (await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"driver_id": world["users"]["driver"]})).status_code == 409
+    assert (await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"vehicle_id": world["vehicles"]["v1"]})).status_code == 409
     ct = {"number": "SH-NEW", "type": "per_trip", "valid_from": str(date.today()), "valid_to": str(date.today() + timedelta(days=90))}
     card = (await legal.post(f"/api/v1/customers/{cust['id']}/contracts", json=ct)).json()
     assert card["missing_fields"] == [] and len(card["contracts"]) == 2
-    r = await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"driver_id": world["users"]["driver"]})
+    r = await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"vehicle_id": world["vehicles"]["v1"]})
     assert r.status_code == 200, r.text
     assert r.json()["contract"]["number"] == "SH-NEW"
 
@@ -162,7 +160,7 @@ async def test_incomplete_customer_blocks_assignment_then_first_visit_flow(world
 
     # Keyingi tashrif tasdiqlangan nuqta bo'yicha tekshiriladi: NEAR undan ~750 m uzoqda
     rid2 = await _new_request(sessionmaker, cust["id"], world["districts"]["a"])
-    await gps.post(f"/api/v1/gps/requests/{rid2}/assign", json={"driver_id": world["users"]["driver"]})
+    await gps.post(f"/api/v1/gps/requests/{rid2}/assign", json={"vehicle_id": world["vehicles"]["v1"]})
     await driver.post(f"/api/v1/driver/requests/{rid2}/enroute")
     await fill_act(driver, rid2, NEAR)
     body = (await driver.post(f"/api/v1/driver/requests/{rid2}/complete", json={**ACT, **NEAR})).json()

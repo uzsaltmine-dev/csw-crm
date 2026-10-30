@@ -45,7 +45,7 @@ async def connect(sid, environ, auth):
 
 
 async def emit_request_updated(payload: dict) -> None:
-    rooms = ["managers", "operators", "gps:all", f"gps:{payload['district_id']}"]
+    rooms = ["managers", "operators", "legal", "gps:all", f"gps:{payload['district_id']}"]
     if payload.get("driver_id"):
         rooms.append(f"driver:{payload['driver_id']}")
     await sio.emit("request:updated", payload, room=rooms)

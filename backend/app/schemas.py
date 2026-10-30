@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.enums import (AppealStatus, ContractType, FailReason, FileKind, LocationStatus, RequestSource, RequestStatus, Role,
                               ShiftStatus, WasteType)
@@ -214,6 +214,7 @@ class ShiftOut(ORM):
 class CustomerOut(ORM):
     id: int
     fixed_no: str
+    code: str | None = None  # korxona maxsus raqami (KTR47)
     stir: str | None
     name: str
     director: str | None
@@ -254,6 +255,20 @@ class RequestOut(ORM):
     overdue: bool = False
     is_repeat: bool = False
     seen: bool | None = None  # joriy xodim ko'rganmi ("Yangi" belgisi); None — hisoblanmagan
+    # uch bosqich: red / yellow / green (+ cancelled)
+    stage: str = "red"
+    vehicle: VehicleOut | None = None
+    driver_name: str | None = None
+    finished_at: datetime | None = None
+    order_form: dict | None = None  # buyurtma varaqasi (maxfiy kodsiz)
+
+    @field_validator("order_form", mode="before")
+    @classmethod
+    def _brief_form(cls, v):
+        if v is None or isinstance(v, dict):
+            return v
+        from app.services.order_forms import brief
+        return brief(v)
 
 
 class DriverTaskOut(RequestOut):
@@ -304,7 +319,7 @@ class FileOut(ORM):
 
 
 class AssignIn(BaseModel):
-    driver_id: int
+    vehicle_id: int
 
 
 # --- korxonalar ---

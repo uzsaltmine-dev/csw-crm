@@ -1,17 +1,17 @@
-"""GPS xodimi: smena ochish va haydovchi biriktirish (haydovchi modulini sinash uchun minimal to'plam)."""
+"""GPS xodimi: kunlik ish jadvali, qizil kartalar (biriktirilmagan arizalar), mashina biriktirish va buyurtma varaqasi."""
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
-from sqlalchemy import select
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DB, require_roles
 from app.core.errors import invalid
-from app.models import User, Vehicle
+from app.models import User
 from app.models.enums import Role
 from app.repositories import requests as req_repo
-from app.repositories import shifts as shift_repo
-from app.schemas import AssignIn, RequestOut, ShiftOpenIn, ShiftOut, VehicleOut
-from app.services import assignment_service, shift_service
+from app.schemas import AssignIn, RequestOut
+from app.services import assignment_service, schedule
 
 router = APIRouter(prefix="/gps", tags=["gps"])
 Gps = Depends(require_roles(Role.gps, Role.admin))
@@ -24,40 +24,49 @@ def _district(user: User, district_id: int | None) -> int:
     return d
 
 
-class DriverRow(BaseModel):
-    id: int
-    full_name: str
-    phone: str | None
-    shift: ShiftOut | None
+class ScheduleRowIn(BaseModel):
+    vehicle_id: int
+    driver_id: int | None = None
+    service: str = Field("legal", pattern="^(legal|individual)$")
+    mahallas: str | None = Field(None, max_length=500)
 
 
-@router.get("/drivers", response_model=list[DriverRow])
-async def drivers(district_id: int | None = Query(None), user: User = Gps, db: AsyncSession = DB):
+class ScheduleIn(BaseModel):
+    rows: list[ScheduleRowIn] = Field(max_length=200)
+
+
+@router.get("/schedule")
+async def get_schedule(day: date | None = None, district_id: int | None = Query(None), user: User = Gps, db: AsyncSession = DB) -> dict:
     d = _district(user, district_id)
-    rows = (await db.execute(select(User).where(User.role == Role.driver, User.district_id == d, User.is_active))).scalars()
-    shifts = {s.driver_id: s for s in await shift_repo.open_in_district(db, d)}
-    return [DriverRow(id=u.id, full_name=u.full_name, phone=u.phone,
-                      shift=ShiftOut.build(shifts[u.id]) if u.id in shifts else None) for u in rows]
+    from sqlalchemy import select
+    from app.models import User as U, Vehicle
+    day = day or schedule.today()
+    vehicles = (await db.execute(select(Vehicle).where(Vehicle.district_id == d, Vehicle.is_active).order_by(Vehicle.plate))).scalars()
+    drivers = (await db.execute(select(U).where(U.role == Role.driver, U.district_id == d, U.is_active).order_by(U.full_name))).scalars()
+    return {"day": day, "district_id": d, "rows": [schedule.row_out(r) for r in await schedule.day_rows(db, d, day)],
+            "vehicles": [{"id": v.id, "plate": v.plate, "model": v.model} for v in vehicles],
+            "drivers": [{"id": u.id, "full_name": u.full_name, "phone": u.phone} for u in drivers]}
 
 
-@router.get("/vehicles", response_model=list[VehicleOut])
-async def vehicles(district_id: int | None = Query(None), free: bool = True, user: User = Gps, db: AsyncSession = DB):
+@router.put("/schedule")
+async def put_schedule(body: ScheduleIn, day: date | None = None, district_id: int | None = Query(None), user: User = Gps,
+                       db: AsyncSession = DB) -> list[dict]:
     d = _district(user, district_id)
-    rows = list((await db.execute(select(Vehicle).where(Vehicle.district_id == d, Vehicle.is_active))).scalars())
-    if free:
-        busy = {s.vehicle_id for s in await shift_repo.open_in_district(db, d)}
-        rows = [v for v in rows if v.id not in busy]
-    return rows
+    rows = await schedule.save_day(db, user, d, day or schedule.today(), [r.model_dump() for r in body.rows])
+    return [schedule.row_out(r) for r in rows]
 
 
-@router.post("/shifts", response_model=ShiftOut, status_code=201)
-async def open_shift(body: ShiftOpenIn, user: User = Gps, db: AsyncSession = DB):
-    return ShiftOut.build(await shift_service.open_shift(db, user, body.driver_id, body.vehicle_id))
+@router.post("/schedule/copy")
+async def copy_schedule(from_day: date, day: date | None = None, district_id: int | None = Query(None), user: User = Gps,
+                        db: AsyncSession = DB) -> list[dict]:
+    d = _district(user, district_id)
+    rows = await schedule.copy_day(db, user, d, day or schedule.today(), from_day)
+    return [schedule.row_out(r) for r in rows]
 
 
 @router.get("/requests", response_model=list[RequestOut])
 async def new_requests(district_id: int | None = Query(None), user: User = Gps, db: AsyncSession = DB):
-    """Biriktirilmagan arizalar (yangisi tepada); `seen` — shu xodim ko'rganmi (frontend "Yangilar" filtri)."""
+    """Qizil kartalar: biriktirilmagan arizalar (yangisi tepada); `seen` — shu xodim ko'rganmi."""
     rows = await req_repo.new_in_district(db, user.district_id or district_id)
     seen = await req_repo.seen_ids(db, user.id, [r.id for r in rows])
     out = []
@@ -68,6 +77,11 @@ async def new_requests(district_id: int | None = Query(None), user: User = Gps, 
     return out
 
 
+@router.get("/requests/{request_id}/vehicles")
+async def vehicle_options(request_id: int, user: User = Gps, db: AsyncSession = DB) -> dict:
+    return await schedule.vehicle_options(db, user, request_id)
+
+
 @router.post("/requests/{request_id}/assign", response_model=RequestOut)
 async def assign(request_id: int, body: AssignIn, user: User = Gps, db: AsyncSession = DB):
-    return await assignment_service.assign(db, user, request_id, body.driver_id)
+    return await assignment_service.assign(db, user, request_id, body.vehicle_id)

@@ -4,6 +4,7 @@ import { adminApi, appealsApi, customersApi, requestsApi } from "@/api/endpoints
 import { errorCode, errorMessage } from "@/api/client";
 import { useI18n } from "@/i18n/I18nContext";
 import { ChatButton } from "@/components/Chat";
+import { StageChip } from "@/components/Stage";
 import type { MessageKey } from "@/i18n/messages";
 import { confirmDialog, toast } from "@/lib/alerts";
 import { formatDateTime } from "@/lib/format";
@@ -165,7 +166,8 @@ export function OperatorHome() {
               <Box key={r.id} sx={{ border: 1, borderColor: "divider", borderRadius: 1, p: 1.25 }}>
                 <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
                   <Typography fontWeight={600} sx={{ fontVariantNumeric: "tabular-nums" }}>{r.number}</Typography>
-                  <Chip size="small" color={STATUS_COLOR[r.status]} label={t(`s_${r.status}` as MessageKey)} />
+                  <StageChip stage={r.stage} />
+                  <Chip size="small" variant="outlined" color={STATUS_COLOR[r.status]} label={t(`s_${r.status}` as MessageKey)} />
                   <RequestChips r={r} />
                 </Stack>
                 <Typography variant="body2">{r.customer.name}</Typography>

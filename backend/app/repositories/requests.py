@@ -12,6 +12,9 @@ def _with_details(q):
         selectinload(Request.customer).selectinload(Customer.contracts),
         selectinload(Request.contract),
         selectinload(Request.shift),
+        selectinload(Request.vehicle),
+        selectinload(Request.driver),
+        selectinload(Request.order_form),
     )
 
 
@@ -59,3 +62,11 @@ async def count_active_on_shift(db: AsyncSession, shift_id: int) -> int:
 async def files_for(db: AsyncSession, request_id: int) -> dict[FileKind, ActFile]:
     rows = (await db.execute(select(ActFile).where(ActFile.request_id == request_id))).scalars()
     return {f.kind: f for f in rows}
+
+
+async def done_for_driver(db: AsyncSession, driver_id: int, limit: int = 50) -> list[Request]:
+    """Haydovchining bajarilgan (yashil) arizalari — eng oxirgisi tepada."""
+    q = _with_details(select(Request).where(Request.driver_id == driver_id,
+                                            Request.status.in_([RequestStatus.done, RequestStatus.suspect]))
+                      .order_by(Request.finished_at.desc(), Request.id.desc()).limit(limit))
+    return list((await db.execute(q)).scalars())

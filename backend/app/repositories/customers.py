@@ -1,4 +1,5 @@
 """Korxonalar: qidiruv, filtrlar, sahifalash."""
+import re
 from datetime import date
 
 from sqlalchemy import and_, exists, func, or_, select
@@ -25,7 +26,9 @@ async def search(db: AsyncSession, *, district_id: int | None, q: str | None, in
     if q and q.strip():
         text = q.strip()
         digits = phone_digits(text)
-        like = [Customer.name_key.contains(key(text)), Customer.fixed_no == text.upper()]
+        like = [Customer.name_key.contains(key(text)), Customer.fixed_no == text.upper(), Customer.code == text.upper()]
+        if re.fullmatch(r"[A-Za-z]{3}\d{2}", text):  # maxsus raqam (KTR47) — faqat aniq moslik
+            like, digits = [Customer.code == text.upper()], ""
         if digits:
             like.append(Customer.stir.contains(digits))
             if len(digits) == 9:  # to'liq telefon raqami
@@ -57,7 +60,7 @@ async def get(db: AsyncSession, customer_id: int, lock: bool = False) -> Custome
 
 
 async def by_stir(db: AsyncSession, stir: str) -> Customer | None:
-    return (await db.execute(select(Customer).where(Customer.stir == stir))).scalar_one_or_none()
+    return (await db.execute(select(Customer).where(Customer.stir == stir))).scalars().first()
 
 
 async def by_name_key(db: AsyncSession, district_id: int, name_key: str) -> Customer | None:

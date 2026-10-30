@@ -45,10 +45,8 @@ async def _load(db: AsyncSession, customer_id: int, lock: bool = False, actor: U
 
 
 async def _check_stir(db: AsyncSession, stir: str | None, own_id: int | None = None) -> None:
-    if stir:
-        other = await repo.by_stir(db, stir)
-        if other and other.id != own_id:
-            raise conflict("stir_taken", f"Bu STIR {other.fixed_no} korxonasida bor")
+    """STIR takrorlanishi mumkin (maktablar kabi tashkilotlarda bir xil) — korxonani maxsus raqam aniqlaydi."""
+    return None
 
 
 async def _check_name(db: AsyncSession, district_id: int, name: str, own_id: int | None = None) -> str:

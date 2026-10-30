@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from app import realtime
 from app.core.errors import conflict, invalid, not_found
 from app.db.base import utcnow
-from app.models import Appeal, Customer, District, Request, User
+from app.models import Appeal, Customer, District, OrderForm, Request, User
 from app.models.enums import OPEN_STATUSES, AppealStatus, RequestStatus, SituationLevel, WasteType
 from app.repositories import customers as customers_repo
 from app.repositories import requests as req_repo
@@ -85,8 +85,14 @@ async def cancel_request(db: AsyncSession, actor: User, request_id: int, reason:
 async def list_requests(db: AsyncSession, actor: User, *, district_id: int | None, status: RequestStatus | None, mine: bool,
                         overdue: bool, q: str | None, limit: int, offset: int, date_from: datetime | None = None,
                         date_to: datetime | None = None, waste_type: WasteType | None = None,
-                        repeat: bool = False) -> tuple[list[Request], int]:
+                        repeat: bool = False, stage: str | None = None) -> tuple[list[Request], int]:
     cond = []
+    if stage == "red":
+        cond.append(Request.status == RequestStatus.new)
+    elif stage == "yellow":
+        cond.append(Request.status.in_([RequestStatus.assigned, RequestStatus.enroute, RequestStatus.onsite, RequestStatus.failed]))
+    elif stage == "green":
+        cond.append(Request.status.in_([RequestStatus.done, RequestStatus.suspect]))
     if date_from:
         cond.append(Request.created_at >= date_from)
     if date_to:
@@ -108,9 +114,14 @@ async def list_requests(db: AsyncSession, actor: User, *, district_id: int | Non
         cond += [Request.status.in_([RequestStatus(x) for x in OPEN_STATUSES]), Request.due_at < utcnow()]
     if q and q.strip():
         like = f"%{q.strip()}%"
-        cond.append(Request.number.ilike(like) | Request.customer_id.in_(select(Customer.id).where(Customer.name.ilike(like))))
+        up = q.strip().upper()
+        cond.append(Request.number.ilike(like)
+                    | Request.customer_id.in_(select(Customer.id).where(Customer.name.ilike(like) | (Customer.code == up)
+                                                                        | (Customer.stir == q.strip())))
+                    | Request.id.in_(select(OrderForm.request_id).where(OrderForm.number == q.strip())))
     total = (await db.execute(select(func.count()).select_from(Request).where(*cond))).scalar_one()
-    rows = (await db.execute(req_repo._with_details(select(Request).where(*cond).order_by(Request.created_at.desc())
+    order = (Request.finished_at.desc(),) if stage == "green" else (Request.assigned_at.asc(),) if stage == "yellow" else ()
+    rows = (await db.execute(req_repo._with_details(select(Request).where(*cond).order_by(*order, Request.created_at.desc())
                                                     .limit(limit).offset(offset)))).scalars()
     return list(rows), total
 

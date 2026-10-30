@@ -9,18 +9,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import realtime
 from app.core.errors import conflict, invalid, not_found
 from app.db.base import utcnow
-from app.models import Act, ActFile, Request, Shift, User
+from app.models import Act, ActFile, Request, User
 from app.models.enums import (
     FailReason,
     FileKind,
     LocationStatus,
     RequestStatus,
-    ShiftStatus,
     SituationLevel,
 )
 from app.repositories import requests as req_repo
 from app.repositories import settings as settings_repo
-from app.repositories import shifts as shift_repo
 from app.services import events, situation
 from app.services.files import UploadedImage
 from app.services.geo import distance_m, valid_coords
@@ -34,15 +32,7 @@ async def _own_request(db: AsyncSession, driver: User, request_id: int, lock: bo
     return req
 
 
-async def _active_shift(db: AsyncSession, driver: User) -> Shift:
-    shift = await shift_repo.open_for_driver(db, driver.id)
-    if not shift or shift.status != ShiftStatus.active:
-        raise conflict("no_active_shift", "Avval smenani boshlang")
-    return shift
-
-
 async def set_enroute(db: AsyncSession, driver: User, request_id: int) -> Request:
-    await _active_shift(db, driver)
     req = await _own_request(db, driver, request_id, lock=True)
     if req.status != RequestStatus.assigned:
         raise conflict("bad_status", "Ariza \"biriktirilgan\" holatida emas")
@@ -56,7 +46,6 @@ async def set_enroute(db: AsyncSession, driver: User, request_id: int) -> Reques
 async def upload_file(db: AsyncSession, storage: Storage, driver: User, request_id: int,
                       kind: FileKind, image: UploadedImage, lat: float | None, lng: float | None,
                       accuracy_m: int | None = None) -> ActFile:
-    await _active_shift(db, driver)
     req = await _own_request(db, driver, request_id, lock=True)
     if req.status not in (RequestStatus.enroute, RequestStatus.onsite):
         raise conflict("bad_status", "Rasmni faqat yo'lda yoki joyida yuklash mumkin")
@@ -90,11 +79,14 @@ async def upload_file(db: AsyncSession, storage: Storage, driver: User, request_
 async def report_location(db: AsyncSession, driver: User, lat: float, lng: float) -> None:
     if not valid_coords(lat, lng):
         raise invalid("bad_coords", "Koordinatalar noto'g'ri")
-    shift = await _active_shift(db, driver)
-    shift.last_lat, shift.last_lng, shift.last_location_at = lat, lng, utcnow()
+    # Smenasiz: haydovchining bugungi jadvaldagi mashinasi joylashuvi yangilanadi (GPS-monitoring ulanmaguncha)
+    from app.services import schedule
+    plan = await schedule.for_driver_today(db, driver.id)
+    if plan:
+        await schedule.set_position(db, plan.vehicle_id, lat, lng, None, "tablet")
     await db.commit()
-    await realtime.emit_driver_location({"driver_id": driver.id, "district_id": shift.district_id,
-                                         "lat": lat, "lng": lng, "at": shift.last_location_at.isoformat()})
+    await realtime.emit_driver_location({"driver_id": driver.id, "district_id": driver.district_id,
+                                         "lat": lat, "lng": lng, "at": utcnow().isoformat()})
 
 
 @dataclass
@@ -110,8 +102,7 @@ REQUIRED_FILES = (FileKind.before, FileKind.after, FileKind.face, FileKind.sign)
 
 
 async def complete(db: AsyncSession, driver: User, request_id: int, data: CompleteInput) -> tuple[Request, Act]:
-    """14 maydon tekshiruvi. 6 tasi tizimdan: sana, davlat raqami, haydovchi, avtonaryad, shartnoma, INN."""
-    shift = await _active_shift(db, driver)
+    """Dalolatnoma tekshiruvi. Tizimdan: sana, davlat raqami, haydovchi, avtonaryad, shartnoma, korxona maxsus raqami."""
     req = await _own_request(db, driver, request_id, lock=True)
     if req.status != RequestStatus.onsite:
         raise conflict("bad_status", "Ariza \"joyida\" holatida emas")
@@ -130,8 +121,6 @@ async def complete(db: AsyncSession, driver: User, request_id: int, data: Comple
         missing.append("naryad_no")
     if not req.contract:
         missing.append("contract")
-    if not req.customer.stir:
-        missing.append("stir")
     if missing:
         raise invalid("act_incomplete", "Dalolatnoma to'liq emas: " + ", ".join(missing))
 
@@ -153,10 +142,13 @@ async def complete(db: AsyncSession, driver: User, request_id: int, data: Comple
             note = "birinchi tashrif: koordinata Manager tasdiqini kutmoqda"
     act = Act(request_id=req.id, containers=data.containers, volume_m3=data.volume_m3, note=data.note.strip(),
               lat=data.lat, lng=data.lng, distance_m=dist, radius_m=radius, in_radius=in_radius,
-              vehicle_plate=shift.vehicle.plate, completed_at=utcnow())
+              vehicle_plate=req.vehicle.plate if req.vehicle else "",
+              completed_at=utcnow())
     db.add(act)
     req.status = RequestStatus.suspect if in_radius is False else RequestStatus.done
     req.finished_at = act.completed_at
+    from app.services.order_forms import close_by_act
+    close_by_act(req.order_form, driver.id, data.volume_m3)  # planshetda yakunlangan — varaqa ham yopiladi (yashil)
     events.record(db, req, driver.id, note)
     if in_radius is False:
         situation.add(db, SituationLevel.warning, "act_suspect",
@@ -175,7 +167,6 @@ async def complete(db: AsyncSession, driver: User, request_id: int, data: Comple
 
 async def fail(db: AsyncSession, driver: User, request_id: int, reason: FailReason, note: str | None) -> Request:
     """Bajarib bo'lmadi: ariza va shartnoma yopilmaydi, Manager nazoratiga o'tadi."""
-    await _active_shift(db, driver)
     req = await _own_request(db, driver, request_id, lock=True)
     if req.status not in (RequestStatus.enroute, RequestStatus.onsite):
         raise conflict("bad_status", "Faqat yo'lda yoki joyidagi arizani bekor qilish mumkin")

@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,10 +5,8 @@ from app.api.deps import DB, get_storage, require_roles
 from app.models import User
 from app.models.enums import FileKind, Role
 from app.repositories import requests as req_repo
-from app.repositories import shifts as shift_repo
-from app.schemas import (ActOut, CompleteIn, CompleteOut, DriverTaskOut, FailIn, FileOut, LocationIn, RequestOut,
-                         ShiftEndIn, ShiftOut)
-from app.services import driver_service, shift_service
+from app.schemas import ActOut, CompleteIn, CompleteOut, DriverTaskOut, FailIn, FileOut, LocationIn, RequestOut
+from app.services import driver_service, schedule
 from app.services.files import read_image
 from app.services.storage import Storage
 
@@ -18,23 +14,18 @@ router = APIRouter(prefix="/driver", tags=["driver"])
 Driver = Depends(require_roles(Role.driver))
 
 
-@router.get("/shift/current", response_model=ShiftOut | None)
-async def current_shift(user: User = Driver, db: AsyncSession = DB):
-    shift = await shift_repo.open_for_driver(db, user.id)
-    return ShiftOut.build(shift) if shift else None
+@router.get("/today")
+async def today(user: User = Driver, db: AsyncSession = DB) -> dict:
+    """Smenasiz: bugungi ish jadvalidagi mashina (bo'lsa)."""
+    plan = await schedule.for_driver_today(db, user.id)
+    return {"day": schedule.today(), "vehicle": {"id": plan.vehicle.id, "plate": plan.vehicle.plate, "model": plan.vehicle.model}
+            if plan else None, "service": plan.service if plan else None}
 
 
-@router.post("/shift/{shift_id}/start", response_model=ShiftOut)
-async def start_shift(shift_id: int, odometer: int = Form(ge=0), fuel: Decimal = Form(ge=0),
-                      photo: UploadFile = File(...), user: User = Driver, db: AsyncSession = DB,
-                      storage: Storage = Depends(get_storage)):
-    image = await read_image(photo)
-    return ShiftOut.build(await shift_service.start_shift(db, storage, user, shift_id, odometer, fuel, image))
-
-
-@router.post("/shift/{shift_id}/end", response_model=ShiftOut)
-async def end_shift(shift_id: int, body: ShiftEndIn, user: User = Driver, db: AsyncSession = DB):
-    return ShiftOut.build(await shift_service.end_shift(db, user, shift_id, body.odometer, body.fuel))
+@router.get("/done", response_model=list[RequestOut])
+async def done(user: User = Driver, db: AsyncSession = DB):
+    """Bajarilganlar (yashil)."""
+    return await req_repo.done_for_driver(db, user.id)
 
 
 @router.get("/tasks", response_model=list[DriverTaskOut])

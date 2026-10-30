@@ -8,7 +8,7 @@ from app.models import ChatMessage, Customer, Request
 from app.models.enums import RequestStatus
 from app.services import chat as chat_svc
 from app.services.storage import MemoryStorage
-from tests.helpers import open_and_start_shift
+from tests.helpers import schedule_driver
 
 WEBM = b"\x1aE\xdf\xa3" + b"\x00" * 2000
 
@@ -38,8 +38,8 @@ async def test_who_can_see_request_chat(world, client_factory, sessionmaker):
     assert [m["author_name"] for m in d["items"]] == ["Operator", "GPS"] and d["can_write"] and not d["closed"]
     # Haydovchi: biriktirilgunga qadar ko'rmaydi, keyin faqat o'zi
     assert (await driver.get(url(rid))).status_code == 403
-    await open_and_start_shift(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
-    assert (await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"driver_id": world["users"]["driver"]})).status_code == 200
+    await schedule_driver(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
+    assert (await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"vehicle_id": world["vehicles"]["v1"]})).status_code == 200
     assert len((await driver.get(url(rid))).json()["items"]) == 2
     assert (await driver.post(url(rid, "/text"), json={"text": "Yo'ldaman"})).status_code == 201
     assert (await driver2.get(url(rid))).status_code == 403

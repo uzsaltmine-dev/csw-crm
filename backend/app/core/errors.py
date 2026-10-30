@@ -9,10 +9,11 @@ class AppError(Exception):
     `message` — o'zbek tilidagi tushuntirish (log va Postman uchun).
     """
 
-    def __init__(self, status: int, code: str, message: str):
+    def __init__(self, status: int, code: str, message: str, details: dict | None = None):
         self.status = status
         self.code = code
         self.message = message
+        self.details = details
 
 
 def not_found(what: str) -> AppError:
@@ -32,4 +33,7 @@ def invalid(code: str, message: str) -> AppError:
 
 
 async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
-    return JSONResponse(status_code=exc.status, content={"error": {"code": exc.code, "message": exc.message}})
+    err = {"code": exc.code, "message": exc.message}
+    if exc.details:
+        err["details"] = exc.details
+    return JSONResponse(status_code=exc.status, content={"error": err})

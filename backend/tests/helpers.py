@@ -5,12 +5,12 @@ NEAR = {"lat": 40.6419, "lng": 72.2392}
 FAR = {"lat": 40.6487, "lng": 72.2390}
 
 
-async def open_and_start_shift(gps, driver, driver_id: int, vehicle_id: int) -> dict:
-    r = await gps.post("/api/v1/gps/shifts", json={"driver_id": driver_id, "vehicle_id": vehicle_id})
-    assert r.status_code == 201, r.text
-    shift = r.json()
-    r = await driver.post(f"/api/v1/driver/shift/{shift['id']}/start", data={"odometer": "12000", "fuel": "80"},
-                          files={"photo": ("car.png", PNG, "image/png")})
+async def schedule_driver(gps, driver, driver_id: int, vehicle_id: int, service: str = "legal") -> list[dict]:
+    """Bugungi ish jadvaliga mashina + haydovchi qo'shadi (smena o'rniga). `driver` — moslik uchun, ishlatilmaydi."""
+    rows = [{k: r[k] for k in ("vehicle_id", "driver_id", "service", "mahallas")} for r in (await gps.get("/api/v1/gps/schedule")).json()["rows"]]
+    rows = [r for r in rows if r["vehicle_id"] != vehicle_id and r["driver_id"] != driver_id]
+    rows.append({"vehicle_id": vehicle_id, "driver_id": driver_id, "service": service})
+    r = await gps.put("/api/v1/gps/schedule", json={"rows": rows})
     assert r.status_code == 200, r.text
     return r.json()
 

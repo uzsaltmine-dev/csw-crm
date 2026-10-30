@@ -6,7 +6,7 @@ from app.db.base import utcnow
 from app.models import SituationEvent
 from app.models.enums import SituationLevel
 from app.services.situation import purge_old
-from tests.helpers import FAR, fill_act, open_and_start_shift
+from tests.helpers import FAR, fill_act, schedule_driver
 from tests.test_customers import _import
 
 ACT = {"containers": 2, "volume_m3": 4, "note": "Olib ketildi"}
@@ -83,10 +83,10 @@ async def test_read_marker_is_per_user_and_never_goes_back(world, client_factory
 
 async def test_driver_events_suspect_failed_and_import(world, client_factory):
     admin, gps, driver = await client_factory("admin"), await client_factory("gps"), await client_factory("driver")
-    await open_and_start_shift(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
+    await schedule_driver(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
     r1, r2 = world["requests"][:2]
     for rid in (r1, r2):
-        await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"driver_id": world["users"]["driver"]})
+        await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"vehicle_id": world["vehicles"]["v1"]})
         await driver.post(f"/api/v1/driver/requests/{rid}/enroute")
     await fill_act(driver, r1, FAR)
     assert (await driver.post(f"/api/v1/driver/requests/{r1}/complete", json={**ACT, **FAR})).json()["request"]["status"] == "suspect"
