@@ -6,7 +6,6 @@ import PrintIcon from "@mui/icons-material/Print";
 import SearchIcon from "@mui/icons-material/Search";
 import { ordersApi, requestsApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
-import { ChatButton } from "@/components/Chat";
 import { OrderPaperDialog } from "@/components/OrderPaper";
 import { STAGE, useNow } from "@/components/Stage";
 import { GreenCard, RedCard, YellowCard } from "@/components/StageCards";
@@ -108,7 +107,7 @@ export function MurojaatBoard({ districts }: RefData) {
           const dname = <Typography variant="caption" sx={{ display: "block", opacity: 0.85, mb: 0.75 }}>{districtName(r.district_id)}</Typography>;
           if (r.stage === "red" || r.stage === "black") {
             return <RedCard key={r.id} r={r} now={now}>{dname}<Stack direction="row" spacing={1} sx={{ "& .MuiButton-root": { color: "#fff", borderColor: "rgba(255,255,255,.6)" } }}>
-              {more}<ChatButton type="request" id={r.id} /></Stack></RedCard>;
+              {more}</Stack></RedCard>;
           }
           if (r.stage === "yellow") {
             return <YellowCard key={r.id} r={r} now={now}>{dname}<Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -119,10 +118,9 @@ export function MurojaatBoard({ districts }: RefData) {
                 onClick={() => act(() => ordersApi.allowReprint(f.id), t("of_reprint_ok"))}>{t("of_allow_reprint")}</Button>}
               {f?.reprint_allowed && <Chip size="small" color="warning" label={t("of_reprint_pending")} />}
               {f && <Button size="small" onClick={() => setPaper(f.id)}>{t("of_open")}</Button>}
-              <ChatButton type="request" id={r.id} />
             </Stack></YellowCard>;
           }
-          return <GreenCard key={r.id} r={r}>{dname}<Stack direction="row" spacing={1}>{more}<ChatButton type="request" id={r.id} variant="text" /></Stack></GreenCard>;
+          return <GreenCard key={r.id} r={r}>{dname}<Stack direction="row" spacing={1}>{more}</Stack></GreenCard>;
         })}
       </Box>
       {items.length < total && <Button onClick={() => setLimit((l) => l + 60)}>{t("board_more", { n: total - items.length })}</Button>}

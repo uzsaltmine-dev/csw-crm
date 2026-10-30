@@ -8,7 +8,6 @@ import SearchIcon from "@mui/icons-material/Search";
 import TaskIcon from "@mui/icons-material/TaskAlt";
 import { customersApi, ordersApi, requestsApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
-import { ChatButton } from "@/components/Chat";
 import { PaperSheet } from "@/components/OrderPaper";
 import { SoundToggle, useAlertSound, useNewItemsSignal, useNow } from "@/components/Stage";
 import { GreenCard, YellowCard } from "@/components/StageCards";
@@ -100,7 +99,6 @@ export function OrdersTab(ref: RefData) {
                 {t("ord_contract")}</Button>
               {r.order_form?.locked && can("orders.unlock") && <Button size="small" color="error" startIcon={<LockOpenIcon />}
                 onClick={() => unlock(r)}>{t("of_unlock")}</Button>}
-              <ChatButton type="request" id={r.id} />
             </Stack>
             {r.order_form && !r.order_form.printed && <Typography variant="caption" sx={{ display: "block", mt: 0.75 }}>{t("ord_wait_print")}</Typography>}
           </YellowCard>
@@ -109,7 +107,7 @@ export function OrdersTab(ref: RefData) {
 
       {sub === "green" && <Stack spacing={1} id="ord-green">
         {loaded && !green.length && <Typography color="text.secondary">{t("ord_no_green")}</Typography>}
-        {green.map((r) => <GreenCard key={r.id} r={r}><ChatButton type="request" id={r.id} variant="text" /></GreenCard>)}
+        {green.map((r) => <GreenCard key={r.id} r={r}></GreenCard>)}
       </Stack>}
 
       {sub === "board" && <MurojaatBoard {...ref} />}

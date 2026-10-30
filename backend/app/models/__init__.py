@@ -27,6 +27,15 @@ class Provider(Base):
     name: Mapped[str] = mapped_column(String(150))
     code: Mapped[str] = mapped_column(String(10), unique=True)
     region_id: Mapped[int] = mapped_column(ForeignKey("regions.id"), unique=True)
+    # Rekvizitlar (schyot-faktura uchun)
+    full_name: Mapped[str | None] = mapped_column(String(200))
+    inn: Mapped[str | None] = mapped_column(String(9))
+    address: Mapped[str | None] = mapped_column(String(255))
+    bank: Mapped[str | None] = mapped_column(String(150))
+    mfo: Mapped[str | None] = mapped_column(String(5))
+    account: Mapped[str | None] = mapped_column(String(20))
+    director: Mapped[str | None] = mapped_column(String(150))
+    chief_accountant: Mapped[str | None] = mapped_column(String(150))
     region: Mapped[Region] = relationship()
 
 
@@ -345,6 +354,41 @@ class OrderForm(TimestampMixin, Base):
     request: Mapped["Request"] = relationship(back_populates="order_form")
 
 
+class Invoice(TimestampMixin, Base):
+    """Oylik schyot-faktura: har korxonaga oyiga bitta. draft → sent (yuborilgach o'zgarmaydi)."""
+    __tablename__ = "invoices"
+    __table_args__ = (UniqueConstraint("customer_id", "period", name="uq_invoices_customer_period"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str] = mapped_column(String(30), unique=True)
+    customer_id: Mapped[int] = mapped_column(ForeignKey("customers.id"), index=True)
+    provider_id: Mapped[int | None] = mapped_column(ForeignKey("providers.id"))
+    period: Mapped[date] = mapped_column(Date, index=True)  # oyning 1-kuni
+    status: Mapped[str] = mapped_column(String(10), default="draft")  # draft | sent
+    total: Mapped[float] = mapped_column(Numeric(14, 2))
+    vat: Mapped[float] = mapped_column(Numeric(14, 2))
+    token: Mapped[str] = mapped_column(String(64), unique=True)  # SMS havolasi uchun (login talab qilmaydi)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime)
+    sent_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    sms_phone: Mapped[str | None] = mapped_column(String(30))
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    customer: Mapped["Customer"] = relationship()
+    lines: Mapped[list["InvoiceLine"]] = relationship(order_by="InvoiceLine.id", cascade="all, delete-orphan", lazy="selectin")
+
+
+class InvoiceLine(Base):
+    __tablename__ = "invoice_lines"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    invoice_id: Mapped[int] = mapped_column(ForeignKey("invoices.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(10))  # form | monthly | one_off | annex (oylik shartnomada summasiz varaqa)
+    request_id: Mapped[int | None] = mapped_column(ForeignKey("requests.id"))
+    day: Mapped[date] = mapped_column(Date)
+    description: Mapped[str] = mapped_column(String(255))
+    qty: Mapped[float] = mapped_column(Numeric(10, 2))
+    unit: Mapped[str] = mapped_column(String(10))
+    price: Mapped[float] = mapped_column(Numeric(14, 2))
+    amount: Mapped[float] = mapped_column(Numeric(14, 2))
+
+
 class Payment(TimestampMixin, Base):
     """Korxona to'lovi (kreditor tomoni). Buxgalter qo'lda yoki bank ko'chirmasidan kiritadi; o'chirilmaydi — bekor qilinadi."""
     __tablename__ = "payments"
@@ -361,31 +405,6 @@ class Payment(TimestampMixin, Base):
     cancel_reason: Mapped[str | None] = mapped_column(String(255))
     customer: Mapped["Customer"] = relationship()
 
-
-class ChatMessage(TimestampMixin, Base):
-    """Ariza yoki murojaat ichidagi yozishma: matn yoki ovozli xabar (audio 90 kun saqlanadi)."""
-    __tablename__ = "chat_messages"
-    __table_args__ = (Index("ix_chat_messages_thread", "thread_type", "thread_id", "id"),)
-    id: Mapped[int] = mapped_column(primary_key=True)
-    thread_type: Mapped[str] = mapped_column(String(10))  # "request" | "appeal"
-    thread_id: Mapped[int] = mapped_column(Integer)
-    author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    kind: Mapped[str] = mapped_column(String(10), default="text")  # "text" | "voice"
-    text: Mapped[str | None] = mapped_column(Text)
-    file_key: Mapped[str | None] = mapped_column(String(200))
-    content_type: Mapped[str | None] = mapped_column(String(50))
-    duration_s: Mapped[int | None] = mapped_column(Integer)
-    expired: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
-    author: Mapped["User"] = relationship(lazy="joined")
-
-
-class ChatRead(Base):
-    """Xodim yozishmani qayergacha o'qigani."""
-    __tablename__ = "chat_reads"
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    thread_type: Mapped[str] = mapped_column(String(10), primary_key=True)
-    thread_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    last_read_id: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class NaryadCounter(Base):
@@ -474,7 +493,7 @@ class SituationRead(Base):
 __all__ = [
     "Base", "Region", "Provider", "District", "User", "Vehicle", "Shift", "Customer", "CustomerContact", "ImportBatch", "Contract",
     "Request", "NaryadCounter", "Act", "ActFile", "RequestEvent", "AppSetting", "SituationEvent", "SituationRead",
-    "UserDistrict", "UserPermission", "Appeal", "RequestSeen", "ChatMessage", "ChatRead", "WorkSchedule", "VehiclePosition", "OrderForm", "Payment",
+    "UserDistrict", "UserPermission", "Appeal", "RequestSeen", "WorkSchedule", "VehiclePosition", "OrderForm", "Payment", "Invoice", "InvoiceLine",
 ]
 
 

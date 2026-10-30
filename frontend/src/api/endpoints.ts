@@ -1,7 +1,7 @@
 import { api } from "./client";
 import { clearTokens, saveTokens, type Tokens } from "@/lib/session";
 import { closeSocket } from "@/lib/socket";
-import type { CompanyCompare, CompanyRow, GreenItem, PaymentItem, Access, AdminUser, Appeal, OrderFormBrief, OrderPaper, ScheduleDay, ScheduleRow, Service, VehicleOption, ChatMessage, ChatThread, ChatThreadType, ChatUnread, RequestDetail, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
+import type { InvoiceItem, MonthForm, MonthFormCustomer, ProviderReq, CompanyCompare, CompanyRow, GreenItem, PaymentItem, Access, AdminUser, Appeal, OrderFormBrief, OrderPaper, ScheduleDay, ScheduleRow, Service, VehicleOption, RequestDetail, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
   ImportBatch, ImportResult, LocationStatus, Region, Role, SituationEvent, SituationLevel, User } from "@/types";
 
 export const gpsApi = {
@@ -162,23 +162,6 @@ export const statsApi = {
   },
 };
 
-export const chatApi = {
-  thread: (type: ChatThreadType, id: number, before_id?: number) =>
-    api.get<ChatThread>(`/chat/${type}/${id}`, { params: { before_id } }).then((r) => r.data),
-  sendText: (type: ChatThreadType, id: number, text: string) => api.post<ChatMessage>(`/chat/${type}/${id}/text`, { text }).then((r) => r.data),
-  sendVoice: (type: ChatThreadType, id: number, blob: Blob, duration: number) => {
-    const fd = new FormData();
-    const ext = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "m4a" : "webm";
-    fd.append("audio", blob, `voice.${ext}`);
-    fd.append("duration", String(duration));
-    return api.post<ChatMessage>(`/chat/${type}/${id}/voice`, fd, { timeout: 60_000 }).then((r) => r.data);
-  },
-  read: (type: ChatThreadType, id: number) => api.post(`/chat/${type}/${id}/read`),
-  unread: () => api.get<ChatUnread>("/chat/unread").then((r) => r.data),
-  /** Audio tab rejimida ham (Bearer) ishlashi uchun axios orqali blob bo'lib olinadi */
-  audio: (messageId: number) => api.get<Blob>(`/chat/audio/${messageId}`, { responseType: "blob" }).then((r) => r.data),
-};
-
 export const ordersApi = {
   paper: (id: number) => api.get<OrderPaper>(`/order-forms/${id}`).then((r) => r.data),
   /** PDF faqat chop etish uchun (maxfiy kod shu faylda) — ekranda ko'rsatilmaydi */
@@ -219,4 +202,19 @@ export const accountingApi = {
       rows: { line: number; name: string; code: string; paid_on: string; amount: number; doc_no: string | null }[] }>(
       "/accounting/payments/import", fd, { params: { dry_run }, timeout: 120_000 }).then((r) => r.data);
   },
+  orderForms: (month: string, district_id?: number, customer_id?: number) => api.get<{ month: string; items: MonthForm[];
+    customers: MonthFormCustomer[]; total: number; count: number }>("/accounting/order-forms", { params: { month, district_id, customer_id } })
+    .then((r) => r.data),
+  invoices: (month: string, district_id?: number) => api.get<{ month: string; items: InvoiceItem[]; total: number; drafts: number; sent: number }>(
+    "/accounting/invoices", { params: { month, district_id } }).then((r) => r.data),
+  generateInvoices: (month: string) => api.post<{ created: number; updated: number; skipped_sent: number }>("/accounting/invoices/generate", null,
+    { params: { month }, timeout: 120_000 }).then((r) => r.data),
+  sendInvoices: (month: string) => api.post<{ sent: number; no_phone: number; total: number }>("/accounting/invoices/send", null,
+    { params: { month }, timeout: 120_000 }).then((r) => r.data),
+  invoicePdf: (id: number) => api.get<Blob>(`/accounting/invoices/${id}/pdf`, { responseType: "blob", timeout: 60_000 }).then((r) => r.data),
+};
+
+export const providersApi = {
+  list: () => api.get<ProviderReq[]>("/admin/providers").then((r) => r.data),
+  save: (id: number, body: Partial<ProviderReq>) => api.put<ProviderReq>(`/admin/providers/${id}`, body).then((r) => r.data),
 };

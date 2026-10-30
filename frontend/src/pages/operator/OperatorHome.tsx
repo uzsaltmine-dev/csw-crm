@@ -3,7 +3,6 @@ import { Alert, Box, Button, Chip, List, ListItemButton, ListItemText, MenuItem,
 import { adminApi, appealsApi, customersApi, requestsApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
 import { useI18n } from "@/i18n/I18nContext";
-import { ChatButton } from "@/components/Chat";
 import { StageChip } from "@/components/Stage";
 import type { MessageKey } from "@/i18n/messages";
 import { confirmDialog, toast } from "@/lib/alerts";
@@ -209,7 +208,6 @@ export function OperatorHome() {
                   <Typography variant="caption" color="text.secondary">
                     {formatDateTime(new Date(r.created_at + "Z"))}{r.due_at && `, ${t("due_at")}: ${formatDateTime(new Date(r.due_at + "Z"))}`}
                   </Typography>
-                  <ChatButton type="request" id={r.id} variant="text" />
                 </Stack>
               </Box>
             ))}
@@ -228,7 +226,6 @@ export function OperatorHome() {
                 </Stack>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
                   <Typography variant="body2">{a.org_name}</Typography>
-                  <ChatButton type={a.request_id ? "request" : "appeal"} id={a.request_id ?? a.id} variant="text" />
                 </Stack>
                 {a.reject_reason && <Typography variant="caption" color="error">{a.reject_reason}</Typography>}
               </Box>

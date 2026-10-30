@@ -143,16 +143,11 @@ API'ni Postman bilan sinash: `Authorization: Bearer <token>` sarlavhasi bilan CS
 - **"Yangi"** — har xodim uchun alohida (`request_seen` jadvali, migratsiya 0008): arizani ochguncha/bosguncha belgilanadi.
   GPS ro'yxati eng yangisi tepada; filtrlar: Yangilar (standart), Bugun, Qayta, Muddati o'tgan, Assenizator, Barchasi.
 
-## Yozishma (PR #11)
+## Yozishma (PR #11) — olib tashlandi (PR #16)
 
-- Har ariza va murojaat ichida bitta umumiy yozishma: **matn** va **ovozli xabar** (60 soniyagacha, audio 90 kun saqlanadi,
-  keyin "saqlash muddati tugagan" bo'lib qoladi). Ruxsatlar: `chat.view`, `chat.write` (migratsiya 0009 mavjud xodimlarga beradi).
-- Kim ko'radi: admin — hammasi; manager, yurist, operator — o'z tumanlari; GPS — o'z tumanidagi arizalar; haydovchi — faqat o'ziga
-  biriktirilgan ariza. Murojaat yozishmasini GPS va haydovchi ko'rmaydi; murojaat ariza bo'lib ochilsa, uning yozishmasi ariza
-  yozishmasining boshida ko'rinadi.
-- Ariza yoki murojaat yopilgach — faqat o'qish (manager va admin yoza oladi).
-- Navbarda o'qilmaganlar soni, boshqa xodim yozsa jonli toast ("Ochish"). Socket xabarlari faqat ko'rish huquqi borlarga
-  (`user:{id}` xonasi). Mikrofon brauzerda faqat HTTPS (yoki localhost) orqali ishlaydi.
+Ariza/murojaat ichidagi yozishma (matn va ovozli xabar) PR #16 da butunlay olib tashlandi: UI, API, socket, ovoz tozalash.
+Migratsiya 0013 `chat_messages`, `chat_reads` jadvallarini va `chat.*` ruxsatlarini o'chiradi (downgrade jadvallarni bo'sh
+holda qaytaradi). Keyinchalik boshqa formatda qo'shilishi mumkin.
 
 ## Uch bosqichli jarayon va buyurtma varaqasi (PR #12)
 
@@ -202,6 +197,22 @@ Batafsil kelishuvlar: `docs/plans/three-stage-flow.md`.
 - **Admin/manager → Korxonalar**: ichki tablar «Statistika» (standart) va «Korxonalar bazasi». O'ng chetda «Fayldan import» va
   yashil «Yangi shartnoma» (oldingi «Yangi korxona»).
 - Statistika: tuman dropdowni (barchasi yoki bitta tuman — hamma raqamlarga), 5 panel — oxirgi 7 / 15 / 30 / 182 / 365 kunda
-  tuzilgan yangi shartnomalar (imzolangan sana, bo'lmasa kiritilgan), tumanlar kesimi jadvali, debitor/kreditor jadvali
-  (tuman ustuni bilan). API: `GET /api/v1/accounting/new-contracts?district_id=`.
+  tuzilgan yangi shartnomalar (imzolangan sana, bo'lmasa kiritilgan), debitor/kreditor jadvali (tuman ustuni bilan).
+  «Tumanlar kesimida» jadvali PR #16 da olib tashlandi. API: `GET /api/v1/accounting/new-contracts?district_id=`.
 - Karta ranglari CMYK: sariq 0/0/100/0 (`#FFF200`), yashil 100/0/100/0 (`#00A651`, matn oq).
+
+## Buyurtma varaqalari va oylik schyot-faktura (PR #16)
+
+- **Buxgalter → «Buyurtma varaqalari»** (`accounting.payments`): tanlangan oyda yashil bo'lgan har bir varaqa (varaqa yoki akt
+  orqali yopilgan). Summa — o'sha sanada amalda bo'lgan shartnoma bo'yicha: kub → narx × m³, reys → reys narxi, oylik → summasiz
+  («abonent»). Oy, tuman, korxona filtrlari; korxonalar bo'yicha jami. API: `GET /api/v1/accounting/order-forms?month=&district_id=&customer_id=`.
+- **«Schyot-fakturalar»**: «Oyni yopish va schyot-fakturalarni yaratish» — har korxonaga oyiga bitta faktura
+  (`SF-YYYY-MM-#####`). Reys/kub — har varaqa alohida qator; oylik shartnoma — bitta qator (oylik summa) + varaqalar summasiz ilova.
+  Narxlar QQS bilan, PDF'da «shu jumladan QQS 12%» (`VAT_RATE`, standart 12) va summa so'z bilan.
+- «Hammasiga jo'natish» — har korxona telefoniga SMS: summa va PDF havolasi (`/api/v1/public/invoices/{token}`, login'siz,
+  32 baytli tasodifiy token, faqat yuborilgan faktura). Havola bazasi: `PUBLIC_BASE_URL` (bo'lmasa `RENDER_EXTERNAL_URL`).
+  Yuborilgan faktura qulflanadi: qayta yaratish unga tegmaydi; yuborilmaganlari qayta hisoblanadi (raqam saqlanadi).
+- Debitor/kreditor va faktura bitta hisob manbasidan (`billing.Ledger`) foydalanadi.
+- **Admin → Sozlamalar → Rekvizitlar**: har viloyat xizmat ko'rsatuvchisining to'liq nomi, STIR, manzil, bank, MFO, hisob raqam,
+  rahbar, bosh buxgalter (fakturaga chiqadi). Demo qiymatlar haqiqiy emas. API: `GET/PUT /api/v1/admin/providers`.
+- Didox / Soliq e-faktura integratsiyasi keyingi bosqichda (ERI kaliti kerak).

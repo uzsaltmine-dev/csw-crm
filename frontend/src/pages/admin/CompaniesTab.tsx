@@ -18,8 +18,8 @@ export const fmtM3 = (v: number) => `${(Math.round(v * 100) / 100).toLocaleStrin
 
 /** Legal/buxgalter «Korxonalar»: faqat statistika — shartnomasi bor korxonalar soni (yashil panel) va saralanadigan jadval.
  *  Har bir son bosilsa yangi sahifa: debitor/kreditor — ikki davrni solishtirish, kub — yashil murojaatlar. */
-export function CompaniesTab({ districts, districtId, showDistrict, hidePanel }: RefData & { districtId?: number; showDistrict?: boolean;
-  hidePanel?: boolean }) {
+export function CompaniesTab({ districts, districtId, showDistrict, hidePanel, backTo = "/admin#companies" }: RefData & { districtId?: number;
+  showDistrict?: boolean; hidePanel?: boolean; backTo?: string }) {
   const { t, tErr } = useI18n();
   const nav = useNavigate();
   const [data, setData] = useState<Awaited<ReturnType<typeof accountingApi.companies>> | null>(null);
@@ -49,7 +49,8 @@ export function CompaniesTab({ districts, districtId, showDistrict, hidePanel }:
         onClick={() => setSort((s) => ({ key: k, dir: s.key === k && s.dir === "asc" ? "desc" : "asc" }))}>{label}</TableSortLabel>
     </TableCell>
   );
-  const go = (r: CompanyRow, view: string) => nav(`/admin/korxona/${r.customer_id}/${view}`);
+  // Ortga: sahifa qaysi bo'limdan ochilgan bo'lsa o'shanga qaytadi (admin/manager — Korxonalar › Statistika)
+  const go = (r: CompanyRow, view: string) => nav(`/admin/korxona/${r.customer_id}/${view}`, { state: { from: backTo } });
   const num = (r: CompanyRow, view: string, text: string, color?: string) => (
     <Link component="button" data-go={`${r.customer_id}-${view}`} onClick={() => go(r, view)} underline="hover"
       sx={{ fontVariantNumeric: "tabular-nums", fontWeight: 600, color: color ?? "inherit", textAlign: "right" }}>{text}</Link>

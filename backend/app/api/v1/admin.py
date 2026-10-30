@@ -9,8 +9,11 @@ from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import DB, require_perm, require_roles
-from app.core.errors import invalid
-from app.models import User
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+
+from app.core.errors import invalid, not_found
+from app.models import Provider, User
 from app.models.enums import Role
 from app.repositories import catalog
 from app.repositories import customers as customers_repo
@@ -42,7 +45,7 @@ from app.services.table_readers import file_kind
 router = APIRouter(prefix="/admin", tags=["admin"])
 AdminOnly = Depends(require_roles(Role.admin))
 # Ma'lumotnomalar (viloyat/tuman) — doirasi bor barcha boshqaruv xodimlari o'qiydi
-RefReader = Depends(require_roles(Role.admin, Role.manager, Role.legal, Role.operator, Role.gps))
+RefReader = Depends(require_roles(Role.admin, Role.manager, Role.legal, Role.operator, Role.gps, Role.accountant))
 
 
 def perm(*codes: str):
@@ -160,6 +163,42 @@ async def put_district_radius(district_id: int, body: DistrictRadiusIn, user: Us
                               db: AsyncSession = DB):
     await admin_service.set_district_radius(db, user, district_id, body.gps_radius_m)
     return await _settings(db, user)
+
+
+# --- xizmat ko'rsatuvchi rekvizitlari (schyot-faktura uchun) ---
+PROVIDER_FIELDS = ("full_name", "inn", "address", "bank", "mfo", "account", "director", "chief_accountant")
+
+
+class ProviderIn(BaseModel):
+    full_name: str | None = Field(None, max_length=200)
+    inn: str | None = Field(None, pattern=r"^\d{9}$")
+    address: str | None = Field(None, max_length=255)
+    bank: str | None = Field(None, max_length=150)
+    mfo: str | None = Field(None, pattern=r"^\d{5}$")
+    account: str | None = Field(None, pattern=r"^\d{20}$")
+    director: str | None = Field(None, max_length=150)
+    chief_accountant: str | None = Field(None, max_length=150)
+
+
+def _prov(p: Provider) -> dict:
+    return {"id": p.id, "name": p.name, "code": p.code, "region_id": p.region_id, **{k: getattr(p, k) for k in PROVIDER_FIELDS}}
+
+
+@router.get("/providers")
+async def list_providers(user: User = perm("settings.view"), db: AsyncSession = DB) -> list[dict]:
+    return [_prov(p) for p in (await db.execute(select(Provider).order_by(Provider.id))).scalars()]
+
+
+@router.put("/providers/{provider_id}")
+async def put_provider(provider_id: int, body: ProviderIn, admin: User = AdminOnly, db: AsyncSession = DB) -> dict:
+    p = await db.get(Provider, provider_id)
+    if not p:
+        raise not_found("provider")
+    for k in PROVIDER_FIELDS:
+        v = getattr(body, k)
+        setattr(p, k, v.strip() if isinstance(v, str) and v.strip() else None)
+    await db.commit()
+    return _prov(p)
 
 
 # --- Excel import ---

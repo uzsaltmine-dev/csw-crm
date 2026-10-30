@@ -5,7 +5,7 @@ Xonalar:
   gps:{district_id} — shu tuman GPS xodimlari
   gps:all           — tumani belgilanmagan GPS xodimlari
   driver:{user_id}  — haydovchining o'zi
-  user:{user_id}    — har bir xodimning shaxsiy xonasi (yozishma xabarlari faqat ko'rish huquqi borlarga)
+  user:{user_id}    — har bir xodimning shaxsiy xonasi
 """
 from http.cookies import SimpleCookie
 
@@ -76,13 +76,3 @@ async def emit_appeal_updated(payload: dict) -> None:
     """Murojaat yaratildi/ko'rib chiqildi: yuridik bo'lim navbati va operator ekrani."""
     await sio.emit("appeal:updated", payload, room=["legal", "operators", "managers"])
 
-
-async def emit_chat_message(payload: dict, user_ids: list[int]) -> None:
-    """Yangi yozishma xabari: faqat shu yozishmani ko'ra oladigan xodimlarga."""
-    if user_ids:
-        await sio.emit("chat:message", jsonable(payload), room=[f"user:{u}" for u in user_ids])
-
-
-def jsonable(d: dict) -> dict:
-    from fastapi.encoders import jsonable_encoder
-    return jsonable_encoder(d)

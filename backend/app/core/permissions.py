@@ -15,7 +15,6 @@ MODULES: dict[str, list[str]] = {
     "requests": ["view", "create", "cancel"],
     "appeals": ["view", "create", "review"],
     "stats": ["view"],
-    "chat": ["view", "write"],
     "orders": ["view", "print", "close", "unlock"],  # buyurtma varaqasi: ko'rish, chop etish (GPS), yopish (legal), blok/qayta chop (manager)
     "accounting": ["view", "payments"],  # debitor/kreditor ko'rish; to'lovlarni kiritish (buxgalter)
 }
@@ -25,16 +24,14 @@ ALL_CODES: frozenset[str] = frozenset(f"{m}.{a}" for m, actions in MODULES.items
 ROLE_TEMPLATES: dict[Role, list[str]] = {
     Role.admin: [],
     Role.manager: ["customers.view", "customers.location_confirm", "staff.view", "vehicles.view", "settings.view",
-                   "requests.view", "stats.view", "chat.view", "chat.write",
-                   "orders.view", "orders.unlock", "accounting.view"],
+                   "requests.view", "stats.view", "orders.view", "orders.unlock", "accounting.view"],
     Role.legal: ["customers.view", "customers.create", "customers.edit", "customers.contract", "appeals.view", "appeals.review",
-                 "chat.view", "chat.write", "requests.view", "orders.view", "orders.close",
-                 "accounting.view"],
-    Role.gps: ["customers.view", "requests.view", "chat.view", "chat.write", "orders.view", "orders.print"],
-    Role.operator: ["customers.view", "requests.view", "requests.create", "appeals.view", "appeals.create", "chat.view", "chat.write",
+                 "requests.view", "orders.view", "orders.close", "accounting.view"],
+    Role.gps: ["customers.view", "requests.view", "orders.view", "orders.print"],
+    Role.operator: ["customers.view", "requests.view", "requests.create", "appeals.view", "appeals.create",
                     "orders.view"],
-    Role.driver: ["chat.view", "chat.write"],
-    Role.accountant: ["customers.view", "accounting.view", "accounting.payments", "chat.view"],
+    Role.driver: [],
+    Role.accountant: ["customers.view", "accounting.view", "accounting.payments"],
 }
 
 # Manager o'z doirasida boshqara oladigan rollar ("o'z xodimlari")

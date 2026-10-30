@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     eskiz_password: str = ""
     sms_sender: str = "4546"
 
+    # SMS havolalari uchun tashqi manzil (masalan https://crm.example.uz); bo'sh bo'lsa RENDER_EXTERNAL_URL
+    public_base_url: str = ""
+    vat_rate: float = 12.0  # QQS, %: narx QQS bilan (fakturada "shu jumladan")
+
     static_dir: str | None = None  # demo: frontend build'i shu papkadan beriladi (bitta konteyner)
     storage_backend: str = "minio"  # "memory" — MinIO'siz lokal ishlab chiqish uchun (fayllar xotirada)
     minio_endpoint: str = "localhost:9000"
@@ -51,6 +55,11 @@ class Settings(BaseSettings):
         if os.getenv("RENDER_EXTERNAL_URL"):
             origins.append(os.environ["RENDER_EXTERNAL_URL"].rstrip("/"))
         return origins
+
+
+def public_url() -> str:
+    s = get_settings()
+    return (s.public_base_url or os.getenv("RENDER_EXTERNAL_URL", "") or "http://localhost:8000").rstrip("/")
 
 
 @lru_cache

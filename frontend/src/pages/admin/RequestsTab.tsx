@@ -5,9 +5,7 @@ import { requestsApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
 import { useCan } from "@/hooks/useCan";
 import { useI18n } from "@/i18n/I18nContext";
-import { ChatButton, useChat } from "@/components/Chat";
 import { StageChip } from "@/components/Stage";
-import ChatIcon from "@mui/icons-material/ChatBubbleOutline";
 import type { MessageKey } from "@/i18n/messages";
 import { toast } from "@/lib/alerts";
 import { formatDateTime } from "@/lib/format";
@@ -37,7 +35,6 @@ export function RequestsTab({ districts }: RefData) {
   const [items, setItems] = useState<RequestItem[]>([]);
   const [total, setTotal] = useState(0);
   const [openId, setOpenId] = useState<number | null>(null);
-  const chat = useChat();
   const fail = useCallback((e: unknown) => toast(tErr(errorCode(e), errorMessage(e)), "error"), [tErr]);
 
   useEffect(() => { const h = window.setTimeout(() => { setQuery(q); setPage(0); }, 300); return () => window.clearTimeout(h); }, [q]);
@@ -104,8 +101,6 @@ export function RequestsTab({ districts }: RefData) {
                   <TableCell sx={{ whiteSpace: "nowrap" }}>
                     <Typography variant="body2" fontWeight={isNew ? 700 : 500} component="span">{r.number}</Typography>
                     {isNew && <Chip size="small" color="primary" label={t("rq_new_badge")} sx={{ ml: 1, height: 20 }} />}
-                    {chat && chat.countFor("request", r.id) > 0 && <Chip size="small" color="error" icon={<ChatIcon />} data-chat-unread={r.id}
-                      label={chat.countFor("request", r.id)} sx={{ ml: 1, height: 20 }} />}
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" fontWeight={isNew ? 600 : 400}>{r.customer.name}
@@ -210,7 +205,7 @@ export function RequestDialog({ id, districts, onClose, onChanged }: { id: numbe
                 {t("rq_cancel_do")}</Button>
             </>
             : <Button id="rq-cancel" color="error" onClick={() => setCancelling(true)} sx={{ mr: "auto" }}>{t("rq_cancel")}</Button>)}
-          {!cancelling && <><ChatButton type="request" id={d.id} /><Button onClick={onClose}>{t("close")}</Button></>}
+          {!cancelling && <><Button onClick={onClose}>{t("close")}</Button></>}
         </DialogActions>
       </>}
     </Dialog>
