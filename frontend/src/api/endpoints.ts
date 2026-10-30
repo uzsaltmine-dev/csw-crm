@@ -196,9 +196,13 @@ export const ordersApi = {
     api.post<RequestItem>(`/order-forms/${id}/close`, { volume_m3, waste_kind }).then((r) => r.data),
 };
 
+export type NewPeriod = "d7" | "d15" | "m1" | "m6" | "y1";
 export const accountingApi = {
-  companies: (q?: string) => api.get<{ total_contracted: number; total: number; items: CompanyRow[];
-    sum: { debit: number; credit: number; volume_m3: number } }>("/accounting/companies", { params: { q } }).then((r) => r.data),
+  companies: (q?: string, district_id?: number) => api.get<{ total_contracted: number; total: number; items: CompanyRow[];
+    sum: { debit: number; credit: number; volume_m3: number } }>("/accounting/companies", { params: { q, district_id } }).then((r) => r.data),
+  newContracts: (district_id?: number) => api.get<{ today: string; periods: { key: NewPeriod; days: number; since: string; count: number }[];
+    districts: ({ district_id: number; name: string } & Record<NewPeriod, number>)[] }>("/accounting/new-contracts", { params: { district_id } })
+    .then((r) => r.data),
   compare: (id: number, a: [string, string], b: [string, string]) => api.get<CompanyCompare>(`/accounting/companies/${id}/compare`,
     { params: { a_from: a[0], a_to: a[1], b_from: b[0], b_to: b[1] } }).then((r) => r.data),
   green: (id: number) => api.get<{ customer: CompanyCompare["customer"]; items: GreenItem[]; total_m3: number; count: number }>(

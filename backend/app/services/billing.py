@@ -140,11 +140,14 @@ async def load(db: AsyncSession, customers: list[Customer]) -> Ledger:
     return Ledger(customers, contracts, greens, volumes, payments, local_day(datetime.now(timezone.utc).replace(tzinfo=None)))
 
 
-async def scoped_customers(db: AsyncSession, actor: User, only_contracted: bool = True, customer_id: int | None = None) -> list[Customer]:
+async def scoped_customers(db: AsyncSession, actor: User, only_contracted: bool = True, customer_id: int | None = None,
+                           district_id: int | None = None) -> list[Customer]:
     q = select(Customer)
     s = access.scope(actor)
     if s is not None:
         q = q.where(Customer.district_id.in_(s or {-1}))
+    if district_id:
+        q = q.where(Customer.district_id == district_id)
     if customer_id is not None:
         q = q.where(Customer.id == customer_id)
     if only_contracted:
@@ -152,8 +155,8 @@ async def scoped_customers(db: AsyncSession, actor: User, only_contracted: bool 
     return list((await db.execute(q.order_by(Customer.name))).scalars())
 
 
-async def companies(db: AsyncSession, actor: User, q: str | None = None) -> dict:
-    custs = await scoped_customers(db, actor)
+async def companies(db: AsyncSession, actor: User, q: str | None = None, district_id: int | None = None) -> dict:
+    custs = await scoped_customers(db, actor, district_id=district_id)
     ledger = await load(db, custs)
     today = ledger.today
     contracted = [c for c in custs if any(ct.valid_from <= today <= ct.valid_to and ct.is_active for ct in ledger.contracts[c.id])]
@@ -208,3 +211,34 @@ async def green_list(db: AsyncSession, actor: User, customer_id: int) -> dict:
              for g in sorted(led.greens[cust.id], key=lambda g: (g.day, g.request.id), reverse=True)]
     return {"customer": {"id": cust.id, "name": cust.name, "code": cust.code, "stir": cust.stir}, "items": items,
             "total_m3": float(sum((g.volume for g in led.greens[cust.id]), ZERO)), "count": len(items)}
+
+
+NEW_CONTRACT_PERIODS = (("d7", 7), ("d15", 15), ("m1", 30), ("m6", 182), ("y1", 365))
+
+
+async def new_contracts(db: AsyncSession, actor: User, district_id: int | None = None) -> dict:
+    """Bugundan orqaga 7/15/30/182/365 kun ichida tuzilgan yangi shartnomalar soni — jami va tumanlar kesimida.
+    Shartnoma sanasi: imzolangan sana, bo'lmasa kiritilgan sana."""
+    from app.models import District
+    today = local_day(datetime.now(timezone.utc).replace(tzinfo=None))
+    s = access.scope(actor)
+    dq = select(District).where(District.is_active).order_by(District.region_id, District.id)
+    if s is not None:
+        dq = dq.where(District.id.in_(s or {-1}))
+    if district_id:
+        dq = dq.where(District.id == district_id)
+    districts = list((await db.execute(dq)).scalars())
+    ids = [d.id for d in districts] or [-1]
+    rows = (await db.execute(select(Contract.signed_on, Contract.created_at, Customer.district_id)
+                             .join(Customer, Customer.id == Contract.customer_id).where(Customer.district_id.in_(ids)))).all()
+    per = {d.id: {k: 0 for k, _ in NEW_CONTRACT_PERIODS} for d in districts}
+    for signed, created, did in rows:
+        day = signed or local_day(created)
+        age = (today - day).days
+        for k, days in NEW_CONTRACT_PERIODS:
+            if 0 <= age < days:
+                per[did][k] += 1
+    total = {k: sum(p[k] for p in per.values()) for k, _ in NEW_CONTRACT_PERIODS}
+    return {"today": today, "periods": [{"key": k, "days": d, "since": today - timedelta(days=d - 1), "count": total[k]}
+                                        for k, d in NEW_CONTRACT_PERIODS],
+            "districts": [{"district_id": d.id, "name": d.name, **per[d.id]} for d in districts]}

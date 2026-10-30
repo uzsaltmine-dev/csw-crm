@@ -129,3 +129,32 @@ async def test_board_hours_and_district_filters(world, client_factory, sessionma
     assert s["red"] == 2
     s = (await admin.get("/api/v1/requests-summary", params={"hours": 72, "district_id": b})).json()
     assert s["red"] == 0
+
+
+async def test_new_contracts_by_period_and_district(world, client_factory, sessionmaker):
+    from app.models import Customer
+    from tests.test_permissions import _manager_a
+    a, b = world["districts"]["a"], world["districts"]["b"]
+    async with sessionmaker() as s:
+        await s.execute(update(Contract).where(Contract.customer_id == world["customer"].id).values(signed_on=T - timedelta(days=40)))
+        for i, (did, back) in enumerate(((a, 2), (a, 10), (b, 20), (b, 100), (a, 300), (b, 500))):
+            c = Customer(fixed_no=f"A-09{i}", name=f"K{i}", name_key=f"k{i}", district_id=did)
+            s.add(c); await s.flush()
+            s.add(Contract(customer_id=c.id, number=f"SH-T{i}", type=ContractType.monthly, price=1,
+                           signed_on=T - timedelta(days=back), valid_from=T - timedelta(days=back), valid_to=T + timedelta(days=30)))
+        await s.commit()
+    admin = await client_factory("admin")
+    r = (await admin.get("/api/v1/accounting/new-contracts")).json()
+    assert {p["key"]: p["count"] for p in r["periods"]} == {"d7": 1, "d15": 2, "m1": 3, "m6": 5, "y1": 6}
+    da = next(d for d in r["districts"] if d["district_id"] == a)
+    assert (da["d7"], da["d15"], da["m1"], da["m6"], da["y1"]) == (1, 2, 2, 3, 4)
+    r = (await admin.get("/api/v1/accounting/new-contracts", params={"district_id": b})).json()
+    assert {p["key"]: p["count"] for p in r["periods"]} == {"d7": 0, "d15": 0, "m1": 1, "m6": 2, "y1": 2}
+    assert [d["district_id"] for d in r["districts"]] == [b]
+    # Manager (faqat A tumani) — faqat o'z tumani
+    _, mgr = await _manager_a(world, client_factory, admin, [])
+    r = (await mgr.get("/api/v1/accounting/new-contracts")).json()
+    assert [d["district_id"] for d in r["districts"]] == [a] and r["periods"][-1]["count"] == 4
+    # Korxonalar jadvali ham tuman bo'yicha
+    rows = (await admin.get("/api/v1/accounting/companies", params={"district_id": b})).json()["items"]
+    assert rows and {x["district_id"] for x in rows} == {b}

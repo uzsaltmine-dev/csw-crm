@@ -22,7 +22,7 @@ type Color = "red" | "black" | "yellow" | "green";
 const COLORS: Color[] = ["red", "black", "yellow", "green"];
 const PANEL: Record<Color, { bg: string; fg: string }> = {
   red: { bg: "#d32f2f", fg: "#fff" }, black: { bg: "#141414", fg: "#fff" },
-  yellow: { bg: STAGE.yellow.border, fg: "#2b1d00" }, green: { bg: STAGE.green.strong, fg: "#fff" },
+  yellow: { bg: STAGE.yellow.bg, fg: STAGE.yellow.ink }, green: { bg: STAGE.green.bg, fg: "#fff" },
 };
 const HOURS = [12, 72, 144] as const;
 

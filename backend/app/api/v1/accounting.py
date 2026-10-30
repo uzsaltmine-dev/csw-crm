@@ -16,9 +16,16 @@ Pay = Depends(require_perm("accounting.payments"))
 
 
 @router.get("/companies")
-async def companies(q: str | None = Query(None, max_length=100), user: User = View, db: AsyncSession = DB) -> dict:
+async def companies(q: str | None = Query(None, max_length=100), district_id: int | None = None, user: User = View,
+                    db: AsyncSession = DB) -> dict:
     """Shartnomasi bor korxonalar: debitor, kreditor, jami kub (legal «Korxonalar» jadvali)."""
-    return await billing.companies(db, user, q)
+    return await billing.companies(db, user, q, district_id)
+
+
+@router.get("/new-contracts")
+async def new_contracts(district_id: int | None = None, user: User = View, db: AsyncSession = DB) -> dict:
+    """Yangi shartnomalar: 7 kun, 15 kun, 1 oy, 6 oy, 1 yil — jami va tumanlar kesimida."""
+    return await billing.new_contracts(db, user, district_id)
 
 
 @router.get("/companies/{customer_id}/compare")
