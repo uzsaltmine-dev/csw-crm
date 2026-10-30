@@ -13,10 +13,10 @@ import type { AdminUser, Role } from "@/types";
 import { AccessDialog } from "./AccessDialog";
 import { type RefData } from "./AdminHome";
 
-const ALL_ROLES: Role[] = ["admin", "manager", "operator", "gps", "legal", "driver"];
+const ALL_ROLES: Role[] = ["admin", "manager", "operator", "gps", "legal", "accountant", "driver"];
 const STAFF_ROLES: Role[] = ["operator", "gps", "legal", "driver"]; // manager boshqara oladigan rollar
 const SINGLE: Role[] = ["driver", "gps"];        // bitta tuman
-const MULTI: Role[] = ["manager", "legal", "operator"]; // bir nechta tuman
+const MULTI: Role[] = ["manager", "legal", "operator", "accountant"]; // bir nechta tuman
 type Form = { id?: number; username: string; full_name: string; phone: string; role: Role; district_id: number | ""; district_ids: number[]; password: string };
 const EMPTY: Form = { username: "", full_name: "", phone: "", role: "driver", district_id: "", district_ids: [], password: "" };
 

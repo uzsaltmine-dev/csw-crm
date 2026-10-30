@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Box, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Alert, Box, Button, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useSituation } from "@/components/Situation";
 import { useCan } from "@/hooks/useCan";
@@ -9,6 +9,10 @@ import { useAppSelector } from "@/store";
 import type { District, Region } from "@/types";
 import { OrdersTab } from "./OrdersTab";
 import { CustomersTab } from "./CustomersTab";
+import { CompaniesTab } from "./CompaniesTab";
+import { PaymentsTab } from "./PaymentsTab";
+import { CustomerDialog } from "./CustomerDialog";
+import NoteAddIcon from "@mui/icons-material/NoteAdd";
 import { StatsTab } from "./StatsTab";
 import { DistrictsTab } from "./DistrictsTab";
 import { SettingsTab } from "./SettingsTab";
@@ -16,14 +20,14 @@ import { SituationTab } from "./SituationTab";
 import { UsersTab } from "./UsersTab";
 import { VehiclesTab } from "./VehiclesTab";
 
-const TABS = ["stats", "situation", "appeals", "customers", "users", "districts", "vehicles", "settings"] as const;
+const TABS = ["stats", "situation", "appeals", "companies", "payments", "customers", "users", "districts", "vehicles", "settings"] as const;
 type TabId = (typeof TABS)[number];
 
 export interface RefData { regions: Region[]; districts: District[]; reload: () => Promise<void>; canWrite: boolean }
 
 // Yorliq → uni ko'rsatadigan ruxsat ("admin" — faqat admin)
 const TAB_PERM: Record<TabId, string[] | "admin"> = {
-  situation: "admin", stats: ["stats.view"], appeals: ["appeals.view", "orders.view", "requests.view"], customers: ["customers.view"], users: ["staff.view"], districts: "admin",
+  situation: "admin", stats: ["stats.view"], appeals: ["appeals.view", "orders.view", "requests.view"], customers: ["customers.view"], companies: ["accounting.view"], payments: ["accounting.payments"], users: ["staff.view"], districts: "admin",
   vehicles: ["vehicles.view"], settings: ["settings.view", "settings.radius_edit"],
 };
 
@@ -33,7 +37,11 @@ export function AdminHome() {
   const role = useAppSelector((s) => s.auth.user?.role);
   const can = useCan();
   const canWrite = role === "admin";
-  const tabs = TABS.filter((x) => TAB_PERM[x] === "admin" ? role === "admin" : (TAB_PERM[x] as string[]).some(can));
+  // Legal va buxgalter uchun «Korxonalar» — faqat statistika (debitor/kreditor); admin/manager — korxonalar bazasi
+  const statsOnly = role === "legal" || role === "accountant";
+  const tabs = TABS.filter((x) => (x === "companies" ? statsOnly : x === "customers" ? !statsOnly : true))
+    .filter((x) => TAB_PERM[x] === "admin" ? role === "admin" : (TAB_PERM[x] as string[]).some(can));
+  const [newContract, setNewContract] = useState(false);
   const loc = useLocation();
   const nav = useNavigate();
   const situation = useSituation();
@@ -57,16 +65,24 @@ export function AdminHome() {
       <Typography variant="h5">{t(role === "admin" ? "admin_title" : tabs.length === 1 && tabs[0] === "customers" ? "customers_title" : "work_panel")}</Typography>
       {!tabs.length && <Alert severity="info">{t("no_panels")}</Alert>}
       <Paper variant="outlined">
-        <Tabs value={tab ?? false} onChange={(_, v: TabId) => pick(v)} variant="scrollable" allowScrollButtonsMobile>
+        <Stack direction="row" alignItems="center">
+        <Tabs value={tab ?? false} onChange={(_, v: TabId) => pick(v)} variant="scrollable" allowScrollButtonsMobile sx={{ flex: 1, minWidth: 0 }}>
           {tabs.map((x) => <Tab key={x} value={x} label={x === "situation" && situation?.unread
             ? <Box component="span" sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>{t("tab_situation")}<CountPill n={situation.unread} /></Box>
             : t(`tab_${x}`)} />)}
         </Tabs>
+        {role === "legal" && can("customers.create") && <Button id="new-contract" variant="contained" disableElevation startIcon={<NoteAddIcon />}
+          onClick={() => setNewContract(true)} sx={{ mx: 1.5, flexShrink: 0, bgcolor: "#1f8a4c", "&:hover": { bgcolor: "#17703d" } }}>
+          {t("new_contract")}</Button>}
+        </Stack>
       </Paper>
+      {newContract && <CustomerDialog id="new" districts={districts} onClose={() => setNewContract(false)} onChanged={() => undefined} />}
       {tab === "situation" && <SituationTab {...ref} />}
       {tab === "stats" && <StatsTab {...ref} />}
       {tab === "appeals" && <OrdersTab {...ref} />}
       {tab === "customers" && <CustomersTab {...ref} />}
+      {tab === "companies" && <CompaniesTab {...ref} />}
+      {tab === "payments" && <PaymentsTab {...ref} />}
       {tab === "users" && <UsersTab {...ref} />}
       {tab === "districts" && <DistrictsTab {...ref} />}
       {tab === "vehicles" && <VehiclesTab {...ref} />}

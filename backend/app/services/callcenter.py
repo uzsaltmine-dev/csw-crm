@@ -85,8 +85,10 @@ async def cancel_request(db: AsyncSession, actor: User, request_id: int, reason:
 async def list_requests(db: AsyncSession, actor: User, *, district_id: int | None, status: RequestStatus | None, mine: bool,
                         overdue: bool, q: str | None, limit: int, offset: int, date_from: datetime | None = None,
                         date_to: datetime | None = None, waste_type: WasteType | None = None,
-                        repeat: bool = False, stage: str | None = None) -> tuple[list[Request], int]:
+                        repeat: bool = False, stage: str | None = None, hours: int | None = None) -> tuple[list[Request], int]:
     cond = []
+    if hours:
+        cond.append(Request.created_at >= utcnow() - timedelta(hours=hours))
     black_edge = utcnow() - timedelta(hours=NORM_HOURS)
     if stage == "red":
         cond += [Request.status == RequestStatus.new, Request.created_at > black_edge]
@@ -288,12 +290,14 @@ async def request_detail(db: AsyncSession, actor: User, request_id: int) -> dict
             "events": [{"status": e.status, "note": e.note, "actor_name": names.get(e.actor_id), "created_at": e.created_at} for e in events]}
 
 
-async def stage_summary(db: AsyncSession, actor: User, hours: int) -> dict:
+async def stage_summary(db: AsyncSession, actor: User, hours: int, district_id: int | None = None) -> dict:
     since = utcnow() - timedelta(hours=hours)
     q = select(Request.status, Request.created_at).where(Request.created_at >= since, Request.status != RequestStatus.cancelled)
     s = access.scope(actor)
     if s is not None:
         q = q.where(Request.district_id.in_(s or {-1}))
+    if district_id:
+        q = q.where(Request.district_id == district_id)
     black_edge = utcnow() - timedelta(hours=NORM_HOURS)
     out = {"hours": hours, "red": 0, "black": 0, "yellow": 0, "green": 0}
     for st, created in (await db.execute(q)).all():

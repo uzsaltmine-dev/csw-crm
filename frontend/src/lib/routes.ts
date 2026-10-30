@@ -9,7 +9,8 @@ export function homePath(user: User): string {
     case "operator": return "/operator";
     case "admin":
     case "manager":
-    case "legal": return "/admin";
+    case "legal":
+    case "accountant": return "/admin";
     default: return "/";
   }
 }

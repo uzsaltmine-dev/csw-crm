@@ -133,6 +133,27 @@ export function StatsTab(_: RefData) {
         </Stack>
       </Stack>
 
+
+
+      <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)", lg: "repeat(6, 1fr)" } }}>
+        {METRICS.map((m) => {
+          const active = m === metric, share = SHARE[m];
+          return (
+            <ButtonBase key={m} data-metric={m} onClick={() => setMetric(m)} focusRipple aria-pressed={active}
+              sx={{ display: "block", textAlign: "left", p: 2, borderRadius: 2, border: 1.5, bgcolor: "background.paper",
+                borderColor: active ? "primary.main" : "divider", boxShadow: active ? "0 0 0 1px var(--mui-palette-primary-main) inset" : "none",
+                "&:focus-visible": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: 2 } }}>
+              <Typography component="p" sx={{ fontSize: 30, fontWeight: 600, lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
+                {data ? <CountUp value={data.total[m]} reduced={reduced} /> : "—"}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{label(m)}</Typography>
+              {share && data && <Typography variant="caption" color="text.secondary">{t("st_share", { p: data.total[share] })}</Typography>}
+            </ButtonBase>
+          );
+        })}
+      </Box>
+      <Typography variant="caption" color="text.secondary">{t("st_click_hint")}</Typography>
+
       {data && <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>{t("st_all_table")}</Typography>
         <Box sx={{ overflowX: "auto" }}>
@@ -154,25 +175,6 @@ export function StatsTab(_: RefData) {
           </Table>
         </Box>
       </Paper>}
-
-      <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(3, 1fr)", lg: "repeat(6, 1fr)" } }}>
-        {METRICS.map((m) => {
-          const active = m === metric, share = SHARE[m];
-          return (
-            <ButtonBase key={m} data-metric={m} onClick={() => setMetric(m)} focusRipple aria-pressed={active}
-              sx={{ display: "block", textAlign: "left", p: 2, borderRadius: 2, border: 1.5, bgcolor: "background.paper",
-                borderColor: active ? "primary.main" : "divider", boxShadow: active ? "0 0 0 1px var(--mui-palette-primary-main) inset" : "none",
-                "&:focus-visible": { outline: "2px solid", outlineColor: "primary.main", outlineOffset: 2 } }}>
-              <Typography component="p" sx={{ fontSize: 30, fontWeight: 600, lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
-                {data ? <CountUp value={data.total[m]} reduced={reduced} /> : "—"}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>{label(m)}</Typography>
-              {share && data && <Typography variant="caption" color="text.secondary">{t("st_share", { p: data.total[share] })}</Typography>}
-            </ButtonBase>
-          );
-        })}
-      </Box>
-      <Typography variant="caption" color="text.secondary">{t("st_click_hint")}</Typography>
 
       {detail && <Box key={key} sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "1fr 1fr" } }}>
         <ChartCard id="st-area" title={t("st_area_title", { metric: label(metric) })}

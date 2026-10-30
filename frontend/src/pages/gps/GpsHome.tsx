@@ -20,12 +20,12 @@ import { getSocket } from "@/lib/socket";
 import { useAppSelector } from "@/store";
 import type { DriverTask, RequestItem, ScheduleDay, ScheduleRow, VehicleOption } from "@/types";
 
-type GpsFilter = "new" | "today" | "repeat" | "overdue" | "septic" | "all";
-const FILTERS: GpsFilter[] = ["new", "today", "repeat", "overdue", "septic", "all"];
+type GpsFilter = "new" | "today" | "repeat" | "overdue" | "all";
+const FILTERS: GpsFilter[] = ["new", "today", "repeat", "overdue", "all"];
 const isToday = (iso: string) => new Date(iso + "Z").toDateString() === new Date().toDateString();
 const MATCH: Record<GpsFilter, (r: DriverTask) => boolean> = {
   new: (r) => r.seen === false, today: (r) => isToday(r.created_at), repeat: (r) => !!r.is_repeat, overdue: (r) => !!r.overdue,
-  septic: (r) => r.waste_type === "septic", all: () => true,
+  all: () => true,
 };
 const km = (m: number | null) => (m == null ? "—" : m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1)} km`);
 const localDay = (offset = 0) => { const d = new Date(Date.now() + 5 * 3600_000 + offset * 86_400_000); return d.toISOString().slice(0, 10); };

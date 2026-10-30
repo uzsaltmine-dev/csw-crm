@@ -13,7 +13,7 @@ from app.core.permissions import apply_template
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.services.schedule import today as schedule_today
-from app.models import AppSetting, Contract, Customer, District, Provider, Region, ChatMessage, Request, RequestEvent, User, VehiclePosition, WorkSchedule, UserDistrict, Vehicle
+from app.models import AppSetting, Contract, Customer, District, Provider, Region, ChatMessage, OrderForm, Payment, Request, RequestEvent, User, VehiclePosition, WorkSchedule, UserDistrict, Vehicle
 from app.db.base import utcnow
 from app.models.enums import ContractType, LocationStatus, RequestStatus, Role, WasteType
 
@@ -82,8 +82,11 @@ async def seed() -> None:
                              address="Mustaqillik ko'chasi, 1-uy", lat=lat + 0.002, lng=lng + 0.002)
                 db.add(c)
                 await db.flush()
-                ct = Contract(customer_id=c.id, number=f"SH-2026/{n:04d}", signed_on=date(2026, 1, 15),
-                              type=ContractType.monthly, price=1_200_000, valid_from=date.today() - timedelta(days=30), valid_to=date.today() + timedelta(days=365))
+                # Debitor/kreditor namunasi uchun turli shartnoma turlari va narxlari
+                ctype, price = ((ContractType.monthly, 1_200_000), (ContractType.per_trip, 180_000),
+                                (ContractType.by_volume, 45_000), (ContractType.monthly, 900_000))[n % 4]
+                ct = Contract(customer_id=c.id, number=f"SH-2026/{n:04d}", signed_on=date.today() - timedelta(days=120),
+                              type=ctype, price=price, valid_from=date.today() - timedelta(days=120), valid_to=date.today() + timedelta(days=365))
                 db.add(ct)
                 await db.flush()
                 now = utcnow()
@@ -99,7 +102,7 @@ async def seed() -> None:
                     if d_name == "Asaka tumani" and k == 0:
                         chat_demo = (r.id, gps)
                 # Statistika uchun tarix: 6 kun oldin bajarilgan va 4 kun oldin ochilib muddati o'tgan ariza
-                for days, status in ((6, RequestStatus.done), (4, RequestStatus.new)):
+                for days, status in ((75, RequestStatus.done), (40, RequestStatus.done), (6, RequestStatus.done), (4, RequestStatus.new)):
                     created = now - timedelta(days=days)
                     r = Request(customer_id=c.id, contract_id=ct.id, district_id=d.id, waste_type=WasteType.household,
                                 volume_estimate=6, note="Namunaviy (tarix)", status=status, created_at=created,
@@ -112,6 +115,16 @@ async def seed() -> None:
                     db.add(RequestEvent(request_id=r.id, status=RequestStatus.new, created_at=created))
                     if r.finished_at:
                         db.add(RequestEvent(request_id=r.id, status=RequestStatus.done, created_at=r.finished_at))
+                        # Yopilgan buyurtma varaqasi (kub bilan) — "Korxonalar" jadvali va hisob uchun
+                        f = OrderForm(request_id=r.id, print_count=1, printed_at=created, volume_m3=3 + ((days + n * 3) % 9),
+                                      waste_kind="solid", closed_at=r.finished_at, closed_via="form")
+                        db.add(f)
+                        await db.flush()
+                        f.number = f"{f.id:07d}"
+                if n % 3 != 0:  # to'lovlar: ba'zilari to'liq to'lamagan (debitor), ba'zilari oldindan (kreditor)
+                    for back, amount in ((100, price * (2 if n % 3 == 1 else 4)), (35, price)):
+                        db.add(Payment(customer_id=c.id, paid_on=date.today() - timedelta(days=back), amount=amount,
+                                       doc_no=f"PP-{n:02d}{back}", source="manual"))
                 # Kartasi to'liq bo'lmagan korxona (STIR, shartnoma, koordinata yo'q) — assenizator arizasi biriktirilmaydi,
                 # yurist STIR va shartnoma kiritgach biriktiriladi; birinchi tashrifdan keyin Manager koordinatani tasdiqlaydi
                 c2 = Customer(fixed_no=f"A-{200 + n:04d}", name=f"\"Yangi mijoz {n}\" MChJ", name_key=f"yangi mijoz {n} mchj",
@@ -126,11 +139,14 @@ async def seed() -> None:
                 r.number = f"M-{r.id:06d}"
                 db.add(RequestEvent(request_id=r.id, status=RequestStatus.new, created_at=utcnow()))
         # Call-center operatori (demo: barcha tumanlar)
+        accountant = User(username="buxgalter", password_hash=pwd, full_name="Buxgalter", role=Role.accountant)
+        apply_template(accountant)
+        db.add(accountant)
         operator = User(username="operator", password_hash=pwd, full_name="Call-center operatori", role=Role.operator)
         apply_template(operator)
         db.add(operator)
         await db.flush()
-        db.add_all([UserDistrict(user_id=u.id, district_id=d) for u in (manager, legal, operator) for d in district_ids])
+        db.add_all([UserDistrict(user_id=u.id, district_id=d) for u in (manager, legal, operator, accountant) for d in district_ids])
         # Yozishma namunasi: Asakadagi birinchi arizada operator va GPS xodimi (gps4)
         if chat_demo:
             rid, gps_user = chat_demo
@@ -139,7 +155,7 @@ async def seed() -> None:
                                  (operator, "Rahmat! Mas'ul shaxs telefoni: +998 91 111-11-11")):
                 db.add(ChatMessage(thread_type="request", thread_id=rid, author_id=author.id, kind="text", text=text))
         await db.commit()
-        print("Seed tayyor: admin, manager, legal, operator, gps1..gps12, driver11..driver122")
+        print("Seed tayyor: admin, manager, legal, operator, buxgalter, gps1..gps12, driver11..driver122")
 
 
 if __name__ == "__main__":
