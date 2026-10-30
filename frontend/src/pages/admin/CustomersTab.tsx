@@ -27,7 +27,7 @@ export function LocationChip({ status }: { status: LocationStatus }) {
 }
 
 /** Ko'rish: admin, manager, yurist. Karta/shartnoma: admin, yurist. Koordinata tasdig'i: admin, manager. Import: admin. */
-export function CustomersTab({ districts }: RefData) {
+export function CustomersTab({ districts, hideActions }: RefData & { hideActions?: boolean }) {
   const { t, tErr } = useI18n();
   const can = useCan();
   const canEdit = can("customers.create");
@@ -77,8 +77,8 @@ export function CustomersTab({ districts }: RefData) {
         <FormControlLabel control={<Switch id="c-incomplete" checked={incomplete} onChange={(e) => resetPage(setIncomplete)(e.target.checked)} />}
           label={t("only_incomplete")} />
         <Stack direction="row" spacing={1} sx={{ ml: { md: "auto" }, "& .MuiButton-root": { whiteSpace: "nowrap" } }}>
-          {canImport && <Button variant="outlined" onClick={() => setImportOpen(true)}>{t("import_excel")}</Button>}
-          {canEdit && <Button variant="contained" onClick={() => setOpenId("new")}>{t("new_customer")}</Button>}
+          {!hideActions && canImport && <Button variant="outlined" onClick={() => setImportOpen(true)}>{t("import_excel")}</Button>}
+          {!hideActions && canEdit && <Button variant="contained" onClick={() => setOpenId("new")}>{t("new_contract")}</Button>}
         </Stack>
       </Stack>
 

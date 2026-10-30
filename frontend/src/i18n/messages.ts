@@ -773,6 +773,16 @@ export const MESSAGES = {
   err_bad_statement: ["Ko'chirmada ustunlar topilmadi: maxsus raqam yoki STIR, sana, summa", "Не найдены столбцы: спец. номер или ИНН, дата, сумма", "Columns not found"],
   err_payment_cancelled: ["To'lov allaqachon bekor qilingan", "Платёж уже отменён", "Already cancelled"],
 
+  cmp_sub_stats: ["Statistika", "Статистика", "Statistics"],
+  cmp_sub_base: ["Korxonalar bazasi", "База организаций", "Company base"],
+  nc_title_stats: ["Yangi shartnoma qilingan korxonalar", "Новые договоры", "New contracts"],
+  nc_d7: ["Oxirgi 7 kun", "Последние 7 дней", "Last 7 days"],
+  nc_d15: ["Oxirgi 15 kun", "Последние 15 дней", "Last 15 days"],
+  nc_m1: ["Oxirgi 1 oy", "Последний месяц", "Last month"],
+  nc_m6: ["Oxirgi 6 oy", "Последние 6 месяцев", "Last 6 months"],
+  nc_y1: ["Oxirgi 1 yil", "Последний год", "Last year"],
+  nc_by_district: ["Tumanlar kesimida", "По районам", "By district"],
+
   // backend xato kodlari
   err_bad_metric: ["Noto'g'ri ko'rsatkich", "Неверный показатель", "Invalid metric"],
   err_network: ["Server bilan aloqa yo'q", "Нет связи с сервером", "Cannot reach the server"],

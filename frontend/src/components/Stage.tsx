@@ -10,9 +10,10 @@ import type { Stage } from "@/types";
 export const NORM_HOURS = 72;
 
 /** Uch bosqich ranglari. Qizil karta vaqt o'tgani sari to'qlashadi, 72 soatdan keyin — qora. */
+// CMYK: sariq 0/0/100/0 → #FFF200, yashil 100/0/100/0 → #00A651
 export const STAGE = {
-  yellow: { bg: "#fff4d1", border: "#e3b23c", ink: "#5b4300", strong: "#c98a00" },
-  green: { bg: "#e6f6ec", border: "#45a86b", ink: "#14532d", strong: "#1f8a4c" },
+  yellow: { bg: "#FFF200", border: "#D6CB00", ink: "#2E2600", strong: "#8C7F00" },
+  green: { bg: "#00A651", border: "#008C44", ink: "#FFFFFF", strong: "#00A651" },
 } as const;
 
 const RED_START = [211, 47, 47];   // #d32f2f
@@ -65,7 +66,7 @@ export function StageChip({ stage }: { stage?: Stage }) {
   const { t } = useI18n();
   if (!stage) return null;
   const sx = stage === "red" ? { bgcolor: "#d32f2f", color: "#fff" }
-    : stage === "yellow" ? { bgcolor: STAGE.yellow.border, color: "#2b1d00" }
+    : stage === "yellow" ? { bgcolor: STAGE.yellow.bg, color: STAGE.yellow.ink, border: `1px solid ${STAGE.yellow.border}` }
       : stage === "green" ? { bgcolor: STAGE.green.strong, color: "#fff" } : {};
   return <Chip size="small" data-stage={stage} label={t(`stage_${stage}`)} sx={{ fontWeight: 600, ...sx }} />;
 }

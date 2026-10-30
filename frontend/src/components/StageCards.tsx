@@ -79,7 +79,9 @@ export function GreenCard({ r, children }: { r: Card; children?: ReactNode }) {
   const f = r.order_form;
   const c = STAGE.green;
   return (
-    <Box data-card="green" data-request={r.number} sx={{ bgcolor: c.bg, color: c.ink, border: 1.5, borderColor: c.border, borderRadius: 2, p: 1.75 }}>
+    <Box data-card="green" data-request={r.number} sx={{ bgcolor: c.bg, color: c.ink, border: 1.5, borderColor: c.border, borderRadius: 2, p: 1.75,
+      // yashil fonda tugmalar oq
+      "& .MuiButton-root": { color: "#fff", borderColor: "rgba(255,255,255,.75)" }, "& .MuiButton-root:hover": { bgcolor: "rgba(255,255,255,.12)" } }}>
       <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="flex-start">
         <Box sx={{ minWidth: 0 }}>
           <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>

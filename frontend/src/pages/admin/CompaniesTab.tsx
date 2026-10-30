@@ -18,7 +18,8 @@ export const fmtM3 = (v: number) => `${(Math.round(v * 100) / 100).toLocaleStrin
 
 /** Legal/buxgalter «Korxonalar»: faqat statistika — shartnomasi bor korxonalar soni (yashil panel) va saralanadigan jadval.
  *  Har bir son bosilsa yangi sahifa: debitor/kreditor — ikki davrni solishtirish, kub — yashil murojaatlar. */
-export function CompaniesTab(_: RefData) {
+export function CompaniesTab({ districts, districtId, showDistrict, hidePanel }: RefData & { districtId?: number; showDistrict?: boolean;
+  hidePanel?: boolean }) {
   const { t, tErr } = useI18n();
   const nav = useNavigate();
   const [data, setData] = useState<Awaited<ReturnType<typeof accountingApi.companies>> | null>(null);
@@ -27,13 +28,13 @@ export function CompaniesTab(_: RefData) {
   const table = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const load = () => accountingApi.companies().then(setData).catch((e) => toast(tErr(errorCode(e), errorMessage(e)), "error"));
+    const load = () => accountingApi.companies(undefined, districtId).then(setData).catch((e) => toast(tErr(errorCode(e), errorMessage(e)), "error"));
     load();
     // Murojaat yashil bo'lsa (kub, debitor) jadval darhol yangilanadi
     const s = getSocket();
     s.on("request:updated", load);
     return () => { s.off("request:updated", load); };
-  }, [tErr]);
+  }, [tErr, districtId]);
 
   const rows = useMemo(() => {
     const t0 = q.trim().toLowerCase();
@@ -56,13 +57,13 @@ export function CompaniesTab(_: RefData) {
 
   return (
     <Stack spacing={2}>
-      <ButtonBase id="contracted-panel" focusRipple onClick={() => table.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+      {!hidePanel && <ButtonBase id="contracted-panel" focusRipple onClick={() => table.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
         sx={{ display: "block", textAlign: "left", borderRadius: 2, p: 3, bgcolor: STAGE.green.strong, color: "#fff" }}>
         <Typography sx={{ fontSize: 44, fontWeight: 700, lineHeight: 1, fontVariantNumeric: "tabular-nums" }} data-count>
           {data ? data.total_contracted : "—"}</Typography>
         <Typography sx={{ mt: 0.5, fontSize: 17 }}>{t("cmp_contracted")}</Typography>
         <Typography variant="caption" sx={{ opacity: 0.85 }}>{t("cmp_contracted_hint")}</Typography>
-      </ButtonBase>
+      </ButtonBase>}
 
       <Paper variant="outlined" sx={{ p: 2 }} ref={table} id="companies-table">
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "center" }} sx={{ mb: 1 }}>
@@ -73,7 +74,7 @@ export function CompaniesTab(_: RefData) {
         <TableContainer>
           <Table size="small">
             <TableHead><TableRow>
-              {head("name", t("cmp_name"))}{head("code", t("cust_code"))}{head("debit", t("cmp_debit"), true)}
+              {head("name", t("cmp_name"))}{head("code", t("cust_code"))}{showDistrict && <TableCell>{t("district")}</TableCell>}{head("debit", t("cmp_debit"), true)}
               {head("credit", t("cmp_credit"), true)}{head("volume_m3", t("cmp_volume"), true)}
             </TableRow></TableHead>
             <TableBody>
@@ -82,13 +83,14 @@ export function CompaniesTab(_: RefData) {
                   <TableCell><Link component="button" onClick={() => go(r, "debit")} underline="hover" sx={{ color: "inherit", textAlign: "left" }}>{r.name}</Link></TableCell>
                   <TableCell sx={{ fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
                     <Link component="button" onClick={() => go(r, "debit")} underline="hover" sx={{ color: "inherit" }}>{r.code}</Link></TableCell>
+                  {showDistrict && <TableCell>{districts.find((d) => d.id === r.district_id)?.name ?? ""}</TableCell>}
                   <TableCell align="right">{num(r, "debit", fmtMoney(r.debit), r.debit > 0 ? "error.main" : undefined)}</TableCell>
                   <TableCell align="right">{num(r, "credit", fmtMoney(r.credit), r.credit > 0 ? "success.main" : undefined)}</TableCell>
                   <TableCell align="right">{num(r, "volume", fmtM3(r.volume_m3))}</TableCell>
                 </TableRow>
               ))}
               {data && <TableRow sx={{ "& td": { fontWeight: 700, borderBottom: 0 } }}>
-                <TableCell>{t("st_total")} ({rows.length})</TableCell><TableCell />
+                <TableCell>{t("st_total")} ({rows.length})</TableCell><TableCell />{showDistrict && <TableCell />}
                 <TableCell align="right">{fmtMoney(rows.reduce((s, r) => s + r.debit, 0))}</TableCell>
                 <TableCell align="right">{fmtMoney(rows.reduce((s, r) => s + r.credit, 0))}</TableCell>
                 <TableCell align="right">{fmtM3(rows.reduce((s, r) => s + r.volume_m3, 0))}</TableCell>

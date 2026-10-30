@@ -8,7 +8,7 @@ import { useI18n } from "@/i18n/I18nContext";
 import { useAppSelector } from "@/store";
 import type { District, Region } from "@/types";
 import { OrdersTab } from "./OrdersTab";
-import { CustomersTab } from "./CustomersTab";
+import { AdminCompaniesTab } from "./AdminCompaniesTab";
 import { CompaniesTab } from "./CompaniesTab";
 import { PaymentsTab } from "./PaymentsTab";
 import { CustomerDialog } from "./CustomerDialog";
@@ -72,7 +72,7 @@ export function AdminHome() {
             : t(`tab_${x}`)} />)}
         </Tabs>
         {role === "legal" && can("customers.create") && <Button id="new-contract" variant="contained" disableElevation startIcon={<NoteAddIcon />}
-          onClick={() => setNewContract(true)} sx={{ mx: 1.5, flexShrink: 0, bgcolor: "#1f8a4c", "&:hover": { bgcolor: "#17703d" } }}>
+          onClick={() => setNewContract(true)} sx={{ mx: 1.5, flexShrink: 0, bgcolor: "#00A651", "&:hover": { bgcolor: "#008C44" } }}>
           {t("new_contract")}</Button>}
         </Stack>
       </Paper>
@@ -80,7 +80,7 @@ export function AdminHome() {
       {tab === "situation" && <SituationTab {...ref} />}
       {tab === "stats" && <StatsTab {...ref} />}
       {tab === "appeals" && <OrdersTab {...ref} />}
-      {tab === "customers" && <CustomersTab {...ref} />}
+      {tab === "customers" && <AdminCompaniesTab {...ref} />}
       {tab === "companies" && <CompaniesTab {...ref} />}
       {tab === "payments" && <PaymentsTab {...ref} />}
       {tab === "users" && <UsersTab {...ref} />}

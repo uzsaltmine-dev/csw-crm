@@ -196,3 +196,12 @@ Batafsil kelishuvlar: `docs/plans/three-stage-flow.md`.
   Ruxsatlar: `accounting.view` (legal, manager), `accounting.payments` (buxgalter). Migratsiya 0012.
 - Admin «Murojaatlar»: tuman dropdowni 12/72/144 soat bilan birga ishlaydi. GPS'da «Assenizator» filtri olib tashlandi.
   Statistika: kartochkalar → tumanlar jadvali → diagrammalar.
+
+## Admin/manager «Korxonalar» va CMYK ranglar (PR #15)
+
+- **Admin/manager → Korxonalar**: ichki tablar «Statistika» (standart) va «Korxonalar bazasi». O'ng chetda «Fayldan import» va
+  yashil «Yangi shartnoma» (oldingi «Yangi korxona»).
+- Statistika: tuman dropdowni (barchasi yoki bitta tuman — hamma raqamlarga), 5 panel — oxirgi 7 / 15 / 30 / 182 / 365 kunda
+  tuzilgan yangi shartnomalar (imzolangan sana, bo'lmasa kiritilgan), tumanlar kesimi jadvali, debitor/kreditor jadvali
+  (tuman ustuni bilan). API: `GET /api/v1/accounting/new-contracts?district_id=`.
+- Karta ranglari CMYK: sariq 0/0/100/0 (`#FFF200`), yashil 100/0/100/0 (`#00A651`, matn oq).

@@ -85,7 +85,9 @@ async def seed() -> None:
                 # Debitor/kreditor namunasi uchun turli shartnoma turlari va narxlari
                 ctype, price = ((ContractType.monthly, 1_200_000), (ContractType.per_trip, 180_000),
                                 (ContractType.by_volume, 45_000), (ContractType.monthly, 900_000))[n % 4]
-                ct = Contract(customer_id=c.id, number=f"SH-2026/{n:04d}", signed_on=date.today() - timedelta(days=120),
+                # Yangi shartnomalar statistikasi uchun imzolangan sanalar har xil (7/15/30/182/365 kun)
+                signed_back = (3, 12, 25, 60, 150, 300)[n % 6]
+                ct = Contract(customer_id=c.id, number=f"SH-2026/{n:04d}", signed_on=date.today() - timedelta(days=signed_back),
                               type=ctype, price=price, valid_from=date.today() - timedelta(days=120), valid_to=date.today() + timedelta(days=365))
                 db.add(ct)
                 await db.flush()
