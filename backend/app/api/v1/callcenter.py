@@ -10,7 +10,7 @@ from app.db.base import utcnow
 from app.models import User
 from app.models.enums import AppealStatus, RequestStatus, WasteType
 from app.repositories import requests as req_repo
-from app.schemas import (AppealAcceptIn, AppealIn, AppealOut, ReasonIn, RequestCreateIn, RequestDetailOut, RequestEventOut,
+from app.schemas import (AppealAcceptIn, AppealIn, AppealOut, NewCompanyIn, ReasonIn, RequestCreateIn, RequestDetailOut, RequestEventOut,
                          RequestListOut, RequestPage, SeenIn, StatsOut)
 from app.services import callcenter as svc
 from app.services import stats
@@ -33,7 +33,7 @@ def _local_day(d: date | None, plus_days: int = 0) -> datetime | None:
 
 @router.get("/requests", response_model=RequestPage)
 async def requests(district_id: int | None = None, status: RequestStatus | None = None, mine: bool = False, overdue: bool = False,
-                   repeat: bool = False, stage: str | None = Query(None, pattern="^(red|yellow|green)$"), waste_type: WasteType | None = None, date_from: date | None = None, date_to: date | None = None,
+                   repeat: bool = False, stage: str | None = Query(None, pattern="^(red|black|yellow|green)$"), waste_type: WasteType | None = None, date_from: date | None = None, date_to: date | None = None,
                    q: str | None = Query(None, max_length=100), limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
                    user: User = perm("requests.view"), db: AsyncSession = DB):
     rows, total = await svc.list_requests(db, user, district_id=district_id, status=status, mine=mine, overdue=overdue, q=q,
@@ -83,6 +83,18 @@ async def cancel_request(request_id: int, body: ReasonIn, user: User = perm("req
 @router.get("/appeals", response_model=list[AppealOut])
 async def appeals(status: AppealStatus | None = None, mine: bool = False, user: User = perm("appeals.view"), db: AsyncSession = DB):
     return await svc.list_appeals(db, user, status, mine)
+
+
+@router.post("/appeals/new-company", response_model=AppealOut, status_code=201)
+async def new_company(body: NewCompanyIn, user: User = perm("appeals.create"), db: AsyncSession = DB):
+    """Operator: yangi korxona (telefon, STIR, kutib oluvchi) — maxsus raqam SMS orqali korxonaga yuboriladi."""
+    return await svc.create_new_company(db, user, body)
+
+
+@router.get("/requests-summary")
+async def requests_summary(hours: int = Query(72, ge=1, le=24 * 31), user: User = perm("requests.view"), db: AsyncSession = DB) -> dict:
+    """Oxirgi N soatda tushgan murojaatlar hozirgi rangi bo'yicha: qizil, qora, sariq, yashil."""
+    return await svc.stage_summary(db, user, hours)
 
 
 @router.post("/appeals", response_model=AppealOut, status_code=201)

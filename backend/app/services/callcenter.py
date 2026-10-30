@@ -58,7 +58,7 @@ async def _new_request(db: AsyncSession, actor: User, cust: Customer, body, repe
                   is_repeat=repeat_of is not None, repeat_of_id=repeat_of.id if repeat_of else None)
     db.add(req)
     await db.flush()
-    req.number = f"AR-{req.id:06d}"
+    req.number = f"M-{req.id:06d}"
     events.record(db, req, actor.id, f"qayta ariza ({repeat_of.number})" if repeat_of else None)
     if commit:
         await db.commit()
@@ -87,8 +87,11 @@ async def list_requests(db: AsyncSession, actor: User, *, district_id: int | Non
                         date_to: datetime | None = None, waste_type: WasteType | None = None,
                         repeat: bool = False, stage: str | None = None) -> tuple[list[Request], int]:
     cond = []
+    black_edge = utcnow() - timedelta(hours=NORM_HOURS)
     if stage == "red":
-        cond.append(Request.status == RequestStatus.new)
+        cond += [Request.status == RequestStatus.new, Request.created_at > black_edge]
+    elif stage == "black":
+        cond += [Request.status == RequestStatus.new, Request.created_at <= black_edge]
     elif stage == "yellow":
         cond.append(Request.status.in_([RequestStatus.assigned, RequestStatus.enroute, RequestStatus.onsite, RequestStatus.failed]))
     elif stage == "green":
@@ -164,6 +167,50 @@ async def create_appeal(db: AsyncSession, actor: User, body: AppealIn) -> Appeal
     return a
 
 
+async def create_new_company(db: AsyncSession, actor: User, body) -> Appeal:
+    """Yangi korxona: karta "shartnoma kutilmoqda" holatida ochiladi, maxsus raqam beriladi va telefonga SMS ketadi.
+    Murojaat yuridik bo'lim navbatiga tushadi; shartnoma bo'lmaguncha GPS ko'rmaydi."""
+    from app.models import CustomerContact
+    from app.repositories import customers as cust_repo
+    from app.services import sms
+    from app.services.customer_import import next_fixed_no_start
+    from app.services.customer_service import stir_taken
+    from app.services.normalize import key, phone_digits
+    if len(phone_digits(body.phone)) != 9:
+        raise invalid("bad_phone", "Telefon raqami 9 xonali bo'lishi kerak (masalan, 94 512 11 16)")
+    other = await cust_repo.by_stir(db, body.stir)
+    if other:
+        raise stir_taken(other)
+    district_id = body.district_id
+    if district_id is None:
+        own = access.scope(actor)
+        if own is None or len(own) != 1:
+            raise invalid("district_required", "Tumanni tanlang")
+        district_id = next(iter(own))
+    d = await db.get(District, district_id)
+    if not d or not d.is_active:
+        raise not_found("district")
+    access.check_scope(actor, d.id)
+    phone = format_phone(body.phone)
+    name = f"Yangi korxona (STIR {body.stir})"
+    cust = Customer(fixed_no=f"A-{await next_fixed_no_start(db):04d}", name=name, name_key=key(name), district_id=d.id,
+                    stir=body.stir, phone=phone, source="call")
+    db.add(cust)
+    await db.flush()
+    db.add(CustomerContact(customer_id=cust.id, name=body.contact_name.strip(), phone=phone))
+    a = Appeal(district_id=d.id, org_name=name, stir=body.stir, caller_name=body.contact_name.strip(), caller_phone=phone,
+               waste_type=body.waste_type, created_by_id=actor.id, customer_id=cust.id)
+    db.add(a)
+    await db.flush()
+    a.number = f"MR-{a.id:06d}"
+    code = cust.code
+    await db.commit()
+    sms.send_later(phone, f"Korxonangiz maxsus raqami: {code}. Chiqindi olib ketish uchun murojaat qilganda shu raqamni ayting. "
+                          "Bu raqamni boshqa hech kimga aytmang.")
+    await _appeal_broadcast(a)
+    return a
+
+
 async def list_appeals(db: AsyncSession, actor: User, status: AppealStatus | None, mine: bool) -> list[Appeal]:
     q = select(Appeal).order_by(Appeal.created_at.desc()).limit(200)
     s = access.scope(actor)
@@ -201,7 +248,12 @@ async def accept_appeal(db: AsyncSession, actor: User, appeal_id: int, body: App
     if body.customer.district_id != a.district_id:
         access.check_scope(actor, body.customer.district_id)
     await _check_contract(db, body.contract)
-    cust = await customer_service.create(db, body.customer, actor)
+    if a.customer_id:  # operator ochgan "shartnoma kutilmoqda" kartasi — to'ldiriladi
+        from app.schemas import CustomerUpdateIn
+        data = {k: v for k, v in body.customer.model_dump(exclude={"district_id"}).items() if v not in (None, "")}
+        cust = await customer_service.update(db, a.customer_id, CustomerUpdateIn(**data), actor)
+    else:
+        cust = await customer_service.create(db, body.customer, actor)
     if body.contract:
         cust = await customer_service.add_contract(db, cust.id, body.contract, actor)
     a = await db.get(Appeal, appeal_id)
@@ -234,3 +286,22 @@ async def request_detail(db: AsyncSession, actor: User, request_id: int) -> dict
     await req_repo.mark_seen(db, actor.id, [req.id])
     return {"req": req, "driver_name": names.get(req.driver_id), "created_by_name": names.get(req.created_by_id),
             "events": [{"status": e.status, "note": e.note, "actor_name": names.get(e.actor_id), "created_at": e.created_at} for e in events]}
+
+
+async def stage_summary(db: AsyncSession, actor: User, hours: int) -> dict:
+    since = utcnow() - timedelta(hours=hours)
+    q = select(Request.status, Request.created_at).where(Request.created_at >= since, Request.status != RequestStatus.cancelled)
+    s = access.scope(actor)
+    if s is not None:
+        q = q.where(Request.district_id.in_(s or {-1}))
+    black_edge = utcnow() - timedelta(hours=NORM_HOURS)
+    out = {"hours": hours, "red": 0, "black": 0, "yellow": 0, "green": 0}
+    for st, created in (await db.execute(q)).all():
+        v = st.value
+        if v == "new":
+            out["black" if created <= black_edge else "red"] += 1
+        elif v in ("done", "suspect"):
+            out["green"] += 1
+        else:
+            out["yellow"] += 1
+    return out

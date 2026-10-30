@@ -33,7 +33,8 @@ async def connect(sid, environ, auth):
     if role == "admin":
         await sio.enter_room(sid, "admins")  # Vaziyat paneli
     elif role == "gps":
-        district = (auth or {}).get("district_id")
+        # Tuman foydalanuvchining o'zidan olinadi (mijoz yubormaydi) — yangi qizil karta jonli tushishi uchun
+        district = await _user_district(uid)
         await sio.enter_room(sid, f"gps:{district}" if district else "gps:all")
     elif role == "driver":
         await sio.enter_room(sid, f"driver:{uid}")
@@ -42,6 +43,17 @@ async def connect(sid, environ, auth):
     elif role == "legal":
         await sio.enter_room(sid, "legal")      # yangi murojaatlar navbati
     return True
+
+
+async def _user_district(uid) -> int | None:
+    from app.db.session import SessionLocal
+    from app.models import User
+    try:
+        async with SessionLocal() as db:
+            u = await db.get(User, int(uid))
+            return u.district_id if u else None
+    except Exception:  # noqa: BLE001 — baza vaqtincha yo'q bo'lsa umumiy xonaga
+        return None
 
 
 async def emit_request_updated(payload: dict) -> None:

@@ -9,7 +9,6 @@ import { useAppSelector } from "@/store";
 import type { District, Region } from "@/types";
 import { OrdersTab } from "./OrdersTab";
 import { CustomersTab } from "./CustomersTab";
-import { RequestsTab } from "./RequestsTab";
 import { StatsTab } from "./StatsTab";
 import { DistrictsTab } from "./DistrictsTab";
 import { SettingsTab } from "./SettingsTab";
@@ -17,14 +16,14 @@ import { SituationTab } from "./SituationTab";
 import { UsersTab } from "./UsersTab";
 import { VehiclesTab } from "./VehiclesTab";
 
-const TABS = ["stats", "situation", "requests", "appeals", "customers", "users", "districts", "vehicles", "settings"] as const;
+const TABS = ["stats", "situation", "appeals", "customers", "users", "districts", "vehicles", "settings"] as const;
 type TabId = (typeof TABS)[number];
 
 export interface RefData { regions: Region[]; districts: District[]; reload: () => Promise<void>; canWrite: boolean }
 
 // Yorliq → uni ko'rsatadigan ruxsat ("admin" — faqat admin)
 const TAB_PERM: Record<TabId, string[] | "admin"> = {
-  situation: "admin", stats: ["stats.view"], requests: ["requests.view"], appeals: ["appeals.view", "orders.view"], customers: ["customers.view"], users: ["staff.view"], districts: "admin",
+  situation: "admin", stats: ["stats.view"], appeals: ["appeals.view", "orders.view", "requests.view"], customers: ["customers.view"], users: ["staff.view"], districts: "admin",
   vehicles: ["vehicles.view"], settings: ["settings.view", "settings.radius_edit"],
 };
 
@@ -66,7 +65,6 @@ export function AdminHome() {
       </Paper>
       {tab === "situation" && <SituationTab {...ref} />}
       {tab === "stats" && <StatsTab {...ref} />}
-      {tab === "requests" && <RequestsTab {...ref} />}
       {tab === "appeals" && <OrdersTab {...ref} />}
       {tab === "customers" && <CustomersTab {...ref} />}
       {tab === "users" && <UsersTab {...ref} />}

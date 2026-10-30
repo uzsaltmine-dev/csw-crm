@@ -118,7 +118,9 @@ export type AppealCreate = OrderFields & { district_id: number; org_name: string
 export const requestsApi = {
   detail: (id: number) => api.get<RequestDetail>(`/requests/${id}`).then((r) => r.data),
   markSeen: (request_ids: number[]) => api.post("/requests/seen", { request_ids }),
-  list: (params: { stage?: "red" | "yellow" | "green"; mine?: boolean; overdue?: boolean; repeat?: boolean; status?: string; district_id?: number; waste_type?: string;
+  summary: (hours: number) => api.get<{ hours: number; red: number; black: number; yellow: number; green: number }>("/requests-summary",
+    { params: { hours } }).then((r) => r.data),
+  list: (params: { stage?: "red" | "black" | "yellow" | "green"; mine?: boolean; overdue?: boolean; repeat?: boolean; status?: string; district_id?: number; waste_type?: string;
     date_from?: string; date_to?: string; q?: string; limit?: number; offset?: number }) =>
     api.get<{ items: RequestItem[]; total: number }>("/requests", { params }).then((r) => r.data),
   openFor: (customer_id: number) => api.get<RequestItem[]>("/requests/open", { params: { customer_id } }).then((r) => r.data),
@@ -129,6 +131,8 @@ export const requestsApi = {
 export const appealsApi = {
   list: (params: { status?: string; mine?: boolean }) => api.get<Appeal[]>("/appeals", { params }).then((r) => r.data),
   create: (body: AppealCreate) => api.post<Appeal>("/appeals", body).then((r) => r.data),
+  newCompany: (body: { phone: string; stir: string; contact_name: string; district_id: number | null }) =>
+    api.post<Appeal>("/appeals/new-company", body).then((r) => r.data),
   accept: (id: number, body: { customer: CustomerFields; contract?: ContractCreate | null }) =>
     api.post<Appeal>(`/appeals/${id}/accept`, body).then((r) => r.data),
   reject: (id: number, reason: string) => api.post<Appeal>(`/appeals/${id}/reject`, { reason }).then((r) => r.data),

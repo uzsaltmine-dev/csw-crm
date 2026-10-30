@@ -22,7 +22,7 @@ async def _request_in_b(world, sessionmaker) -> int:
         c = Customer(fixed_no="B-1", name="Termiz MChJ", name_key="termiz mchj", district_id=world["districts"]["b"])
         s.add(c); await s.flush()
         r = Request(customer_id=c.id, district_id=world["districts"]["b"])
-        s.add(r); await s.flush(); r.number = f"AR-{r.id:06d}"
+        s.add(r); await s.flush(); r.number = f"M-{r.id:06d}"
         await s.commit()
         return r.id
 

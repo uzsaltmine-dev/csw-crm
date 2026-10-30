@@ -170,3 +170,16 @@ Batafsil kelishuvlar: `docs/plans/three-stage-flow.md`.
   `GET/PUT /api/v1/integrations/schedule`. Ixtiyoriy sozlama: `ORDER_CODE_SECRET` (bo'sh bo'lsa `JWT_SECRET`'dan olinadi).
 - **Yangi ruxsatlar** (migratsiya 0010 mavjud xodimlarga beradi): `orders.view`, `orders.print` (GPS), `orders.close` (legal),
   `orders.unlock` (manager); legal uchun `requests.view`.
+
+## Murojaatlar va operator (PR #13)
+
+- «Ariza» tushunchasi olib tashlandi: hamma joyda **murojaat**, raqamlar `M-000123` (migratsiya 0011 eski `AR-` raqamlarni o'zgartiradi).
+- **Admin/manager → Murojaatlar**: barcha murojaatlar o'z rangida (qizil, qora — 72 soatdan o'tgan, sariq, yashil),
+  12 / 72 / 144 soatlik 4 ta rangli panel, rang filtri, qidiruv. Manager sariq kartadan qayta chop etishga ruxsat beradi
+  va blokni ochadi.
+- **Operator**: «Yangi korxona» (telefon, STIR, mashinani kutib oluvchi) — korxona «shartnoma kutilmoqda» holatida ochiladi,
+  maxsus raqam SMS bilan yuboriladi (Eskiz.uz: `ESKIZ_EMAIL`, `ESKIZ_PASSWORD`, `SMS_SENDER`; sozlanmasa faqat jurnal).
+  Mavjud korxona: telefon, chiqindi turi, kutib oluvchi → «Murojaat yaratish».
+- **STIR yana unikal**: band bo'lsa «Siz STIRni xato kiritdingiz — bu STIR «X» korxonasiga tegishli» va shu korxonaga o'tish.
+- Shartnomasiz korxonalar murojaatlari GPS'ga ko'rinmaydi. GPS socket xonasi tuman bo'yicha (yangi qizil karta jonli tushadi).
+- Sariq kartalarda buyurtma varaqasi raqami ko'rsatilmaydi (faqat qidiruv uchun).

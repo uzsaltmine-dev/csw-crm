@@ -166,11 +166,13 @@ function AssignBar({ r, onDone, onError }: { r: DriverTask; onDone: (res: Driver
   return (
     <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ sm: "center" }} onClick={(e) => e.stopPropagation()}>
       <Button data-vehicle-picker variant="contained" disableElevation endIcon={<ExpandIcon />} onClick={(e) => open(e.currentTarget)}
-        sx={{ bgcolor: "#fff", color: "#7a1010", "&:hover": { bgcolor: "#ffecec" }, justifyContent: "space-between", minWidth: 260 }}>
+        sx={{ bgcolor: "transparent", color: "#fff", border: "2px solid rgba(255,255,255,.85)", "&:hover": { bgcolor: "rgba(255,255,255,.12)" },
+          justifyContent: "space-between", minWidth: 260 }}>
         {pick ? `${pick.plate} · ${pick.driver_name ?? ""} · ${km(pick.distance_m)}` : t("gps_pick_vehicle")}
       </Button>
       <Button data-assign variant="contained" disableElevation disabled={!pick || busy || !online} onClick={assign}
-        sx={{ bgcolor: "#111", "&:hover": { bgcolor: "#000" }, "&.Mui-disabled": { bgcolor: "rgba(0,0,0,.25)", color: "rgba(255,255,255,.6)" } }}>
+        sx={{ bgcolor: "#fff", color: "#8b0f0f", fontWeight: 700, border: "2px solid #fff", "&:hover": { bgcolor: "#ffe3e3" },
+          "&.Mui-disabled": { bgcolor: "rgba(0,0,0,.22)", color: "rgba(255,255,255,.75)", borderColor: "rgba(255,255,255,.35)" } }}>
         {busy ? <CircularProgress size={18} color="inherit" /> : t("gps_assign_vehicle")}
       </Button>
       <Box sx={{ ml: { sm: "auto" }, "& .MuiButton-root": { color: "#fff", borderColor: "rgba(255,255,255,.6)" } }}>

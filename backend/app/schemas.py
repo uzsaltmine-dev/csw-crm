@@ -514,6 +514,15 @@ class AppealIn(BaseModel):
     note: str | None = Field(default=None, max_length=2000)
 
 
+class NewCompanyIn(BaseModel):
+    """Operator: yangi korxona — faqat telefon, STIR va mashinani kutib oluvchi shaxs (tuman — operatorda bir nechta bo'lsa)."""
+    phone: str = Field(min_length=7, max_length=30)
+    stir: str = Field(pattern=r"^\d{9}$")
+    contact_name: str = Field(min_length=2, max_length=150)
+    district_id: int | None = None
+    waste_type: WasteType = WasteType.household
+
+
 class AppealOut(ORM):
     id: int
     number: str | None

@@ -67,7 +67,8 @@ async def copy_schedule(from_day: date, day: date | None = None, district_id: in
 @router.get("/requests", response_model=list[RequestOut])
 async def new_requests(district_id: int | None = Query(None), user: User = Gps, db: AsyncSession = DB):
     """Qizil kartalar: biriktirilmagan arizalar (yangisi tepada); `seen` — shu xodim ko'rganmi."""
-    rows = await req_repo.new_in_district(db, user.district_id or district_id)
+    # Shartnomasiz korxonalar murojaatlari GPS'ga umuman ko'rinmaydi
+    rows = [r for r in await req_repo.new_in_district(db, user.district_id or district_id) if not r.customer.missing_fields]
     seen = await req_repo.seen_ids(db, user.id, [r.id for r in rows])
     out = []
     for r in rows:

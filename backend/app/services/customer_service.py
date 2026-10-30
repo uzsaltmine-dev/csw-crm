@@ -1,7 +1,7 @@
 """Korxona kartasi: yaratish, tahrirlash, aloqalar, shartnomalar, koordinatani tasdiqlash."""
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.errors import conflict, forbidden, invalid, not_found
+from app.core.errors import AppError, conflict, forbidden, invalid, not_found
 from app.models import Contract, Customer, CustomerContact, District, User
 from app.models.enums import LocationStatus, Role, SituationLevel
 from app.repositories import customers as repo
@@ -45,8 +45,16 @@ async def _load(db: AsyncSession, customer_id: int, lock: bool = False, actor: U
 
 
 async def _check_stir(db: AsyncSession, stir: str | None, own_id: int | None = None) -> None:
-    """STIR takrorlanishi mumkin (maktablar kabi tashkilotlarda bir xil) — korxonani maxsus raqam aniqlaydi."""
-    return None
+    """STIR takrorlanmaydi: boshqa korxonaga tegishli bo'lsa — "STIRni xato kiritdingiz" va o'sha korxona."""
+    if stir:
+        other = await repo.by_stir(db, stir)
+        if other and other.id != own_id:
+            raise stir_taken(other)
+
+
+def stir_taken(other: Customer) -> AppError:
+    return AppError(409, "stir_taken", f"Siz STIRni xato kiritdingiz — bu STIR «{other.name}» korxonasiga tegishli",
+                    {"customer_id": other.id, "name": other.name, "district_id": other.district_id})
 
 
 async def _check_name(db: AsyncSession, district_id: int, name: str, own_id: int | None = None) -> str:

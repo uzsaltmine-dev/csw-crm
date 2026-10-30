@@ -23,7 +23,7 @@ async def test_operator_request_and_repeat_confirmation(world, client_factory):
     r = await op.post("/api/v1/requests", json={"customer_id": cid, **ORDER, "confirm_repeat": True})
     assert r.status_code == 201, r.text
     b = r.json()
-    assert b["is_repeat"] and b["repeat_of_id"] == opened[0]["id"] and b["number"] == f"AR-{b['id']:06d}"
+    assert b["is_repeat"] and b["repeat_of_id"] == opened[0]["id"] and b["number"] == f"M-{b['id']:06d}"
     assert b["caller_phone"] == "+998 94 512-11-16" and b["waste_type"] == "septic" and b["source"] == "phone"
     assert b["contract"]["number"] == "SH-2026/0001" and b["status"] == "new" and not b["overdue"]
     # GPS xodimi ro'yxatida darhol, "qayta" belgisi bilan

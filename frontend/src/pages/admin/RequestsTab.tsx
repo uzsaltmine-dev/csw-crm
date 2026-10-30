@@ -136,7 +136,7 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return <Box><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="body2">{value || "—"}</Typography></Box>;
 }
 
-function RequestDialog({ id, districts, onClose, onChanged }: { id: number; districts: RefData["districts"]; onClose: () => void; onChanged: () => void }) {
+export function RequestDialog({ id, districts, onClose, onChanged }: { id: number; districts: RefData["districts"]; onClose: () => void; onChanged: () => void }) {
   const { t, tErr } = useI18n();
   const can = useCan();
   const [d, setD] = useState<RequestDetail | null>(null);
