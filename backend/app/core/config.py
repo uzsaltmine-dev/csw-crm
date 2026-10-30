@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     # Demo/sinov: har brauzer tabida alohida sessiya (token cookie o'rniga tab xotirasida). Prod'da o'chiq — httpOnly cookie.
     tab_sessions: bool = False
 
+    # Tashqi GPS-monitoring tizimi uchun API kalit (X-Api-Key). Bo'sh bo'lsa integratsiya API'si o'chiq.
+    integration_api_key: str = ""
+    # Buyurtma varaqasi maxfiy kodining HMAC kaliti (bo'sh bo'lsa jwt_secret'dan olinadi)
+    order_code_secret: str = ""
+
     static_dir: str | None = None  # demo: frontend build'i shu papkadan beriladi (bitta konteyner)
     storage_backend: str = "minio"  # "memory" — MinIO'siz lokal ishlab chiqish uchun (fayllar xotirada)
     minio_endpoint: str = "localhost:9000"

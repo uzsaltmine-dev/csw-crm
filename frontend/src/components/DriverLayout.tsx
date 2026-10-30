@@ -11,7 +11,7 @@ export function DriverLayout({ children, wide = false }: { children: ReactNode; 
   const { t, lang, setLang } = useI18n();
   const online = useOnline();
   const user = useAppSelector((s) => s.auth.user);
-  const plate = useAppSelector((s) => s.driver.shift?.vehicle.plate);
+  const plate = useAppSelector((s) => s.driver.today?.vehicle?.plate);
   const dispatch = useAppDispatch();
   const watcher = user?.role === "admin"; // Vaziyat paneli — faqat admin
   const page = (

@@ -30,10 +30,10 @@ async def test_new_badge_is_per_user(world, client_factory):
 
 async def test_request_detail_and_filters(world, client_factory, sessionmaker):
     admin, gps, driver = await client_factory("admin"), await client_factory("gps"), await client_factory("driver")
-    from tests.helpers import open_and_start_shift
-    await open_and_start_shift(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
+    from tests.helpers import schedule_driver
+    await schedule_driver(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
     rid = world["requests"][0]
-    await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"driver_id": world["users"]["driver"]})
+    await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"vehicle_id": world["vehicles"]["v1"]})
     d = (await admin.get(f"/api/v1/requests/{rid}")).json()
     assert d["driver_name"] == "Haydovchi A" and d["naryad_no"] and [e["status"] for e in d["events"]] == ["assigned"]
     assert d["events"][0]["actor_name"] == "GPS"

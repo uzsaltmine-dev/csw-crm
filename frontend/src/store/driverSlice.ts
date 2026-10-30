@@ -1,21 +1,21 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { driverApi } from "@/api/endpoints";
-import type { DriverTask, Shift } from "@/types";
+import type { DriverTask, Service } from "@/types";
 
-interface DriverState { shift: Shift | null; tasks: DriverTask[]; loaded: boolean }
-const initialState: DriverState = { shift: null, tasks: [], loaded: false };
+/** Smenasiz: bugungi jadvaldagi mashina (bo'lsa), biriktirilgan (sariq) va bajarilgan (yashil) arizalar. */
+interface Today { vehicle: { id: number; plate: string; model: string | null } | null; service: Service | null }
+interface DriverState { today: Today | null; tasks: DriverTask[]; done: DriverTask[]; loaded: boolean }
+const initialState: DriverState = { today: null, tasks: [], done: [], loaded: false };
 
 export const refreshDriver = createAsyncThunk("driver/refresh", async () => {
-  const shift = await driverApi.currentShift();
-  const tasks = shift?.status === "active" ? await driverApi.tasks() : [];
-  return { shift, tasks };
+  const [today, tasks, done] = await Promise.all([driverApi.today(), driverApi.tasks(), driverApi.done()]);
+  return { today, tasks, done };
 });
 
 const slice = createSlice({
   name: "driver",
   initialState,
   reducers: {
-    setShift: (s, a: { payload: Shift | null }) => { s.shift = a.payload; },
     upsertTask: (s, a: { payload: DriverTask }) => {
       const i = s.tasks.findIndex((t) => t.id === a.payload.id);
       if (i >= 0) s.tasks[i] = { ...s.tasks[i], ...a.payload };
@@ -23,9 +23,11 @@ const slice = createSlice({
     removeTask: (s, a: { payload: number }) => { s.tasks = s.tasks.filter((t) => t.id !== a.payload); },
   },
   extraReducers: (b) => {
-    b.addCase(refreshDriver.fulfilled, (s, a) => { s.shift = a.payload.shift; s.tasks = a.payload.tasks; s.loaded = true; });
+    b.addCase(refreshDriver.fulfilled, (s, a) => {
+      s.today = a.payload.today; s.tasks = a.payload.tasks; s.done = a.payload.done; s.loaded = true;
+    });
   },
 });
 
-export const { setShift, upsertTask, removeTask } = slice.actions;
+export const { upsertTask, removeTask } = slice.actions;
 export default slice.reducer;

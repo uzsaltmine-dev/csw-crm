@@ -12,7 +12,8 @@ from sqlalchemy import select
 from app.core.permissions import apply_template
 from app.core.security import hash_password
 from app.db.session import SessionLocal
-from app.models import AppSetting, Contract, Customer, District, Provider, Region, ChatMessage, Request, RequestEvent, User, UserDistrict, Vehicle
+from app.services.schedule import today as schedule_today
+from app.models import AppSetting, Contract, Customer, District, Provider, Region, ChatMessage, Request, RequestEvent, User, VehiclePosition, WorkSchedule, UserDistrict, Vehicle
 from app.db.base import utcnow
 from app.models.enums import ContractType, LocationStatus, RequestStatus, Role, WasteType
 
@@ -63,11 +64,18 @@ async def seed() -> None:
                 apply_template(gps)
                 db.add(gps)
                 for k in (1, 2):
-                    db.add(Vehicle(plate=f"{plate_code} {n:02d}{k} {code[:2]}", model="ISUZU NQR", district_id=d.id))
+                    veh = Vehicle(plate=f"{plate_code} {n:02d}{k} {code[:2]}", model="ISUZU NQR", district_id=d.id)
                     drv = User(username=f"driver{n}{k}", password_hash=pwd, full_name=f"Haydovchi {n}-{k}",
                                phone=f"+998 90 000-{n:02d}-{k:02d}", role=Role.driver, district_id=d.id)
                     apply_template(drv)  # yozishma ruxsatlari
-                    db.add(drv)
+                    db.add_all([veh, drv])
+                    await db.flush()
+                    # Bugungi ish jadvali: 1-mashina — yuridik bo'lim, 2-mashina — mahallalar (jismoniy abonentlar).
+                    # Joylashuv (GPS-monitoring ulanmaguncha namunaviy): 1-mashina korxonaga yaqinroq.
+                    db.add(WorkSchedule(day=schedule_today(), district_id=d.id, vehicle_id=veh.id, driver_id=drv.id,
+                                        service="legal" if k == 1 else "individual",
+                                        mahallas=None if k == 1 else "Bog'bon, Navbahor mahallalari"))
+                    db.add(VehiclePosition(vehicle_id=veh.id, lat=lat + 0.01 * k, lng=lng - 0.008 * k, at=utcnow(), source="demo"))
                 c = Customer(fixed_no=f"A-{100 + n:04d}", stir=f"{300000000 + n * 1111:09d}", name=f"\"Namuna {n}\" MChJ",
                              name_key=f"namuna {n} mchj", location_status=LocationStatus.confirmed, activity_type="Savdo",
                              director="Namuna rahbar", phone="+998 91 111-11-11", district_id=d.id,

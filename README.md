@@ -153,3 +153,20 @@ API'ni Postman bilan sinash: `Authorization: Bearer <token>` sarlavhasi bilan CS
 - Ariza yoki murojaat yopilgach — faqat o'qish (manager va admin yoza oladi).
 - Navbarda o'qilmaganlar soni, boshqa xodim yozsa jonli toast ("Ochish"). Socket xabarlari faqat ko'rish huquqi borlarga
   (`user:{id}` xonasi). Mikrofon brauzerda faqat HTTPS (yoki localhost) orqali ishlaydi.
+
+## Uch bosqichli jarayon va buyurtma varaqasi (PR #12)
+
+Batafsil kelishuvlar: `docs/plans/three-stage-flow.md`.
+
+- 🔴 **Qizil** (GPS): 72 soat teskari timer, rang to'qlashadi, 72 soatdan keyin qora; yangi karta tushganda ovozli alert.
+  Mashina dropdowni: bugungi ish jadvalidan, yuridik bo'lim mashinalari yuqorida, korxonagacha masofa bilan.
+- 🟡 **Sariq** (GPS, legal, haydovchi): biriktirilganiga N soat; legal va haydovchi uchun ham ovozli alert.
+- 🟢 **Yashil**: legal varaqani yopganda yoki haydovchi planshetda dalolatnomani yakunlaganda.
+- **Korxona maxsus raqami** (`KTR47`): STIR o'rniga, avtomatik va doimiy. STIR endi takrorlanishi mumkin.
+- **Buyurtma varaqasi**: GPS chop etadi (PDF, ikki qism). Maxfiy tasdiq kodi faqat qog'ozda bo'ladi, bazada HMAC xeshi.
+  Qayta chop etish manager ruxsati bilan. Kod 3 marta noto'g'ri kiritilsa blok. Yopish uchun skan, kod, kub va tur kerak.
+- **Kunlik ish jadvali** smenalar o'rnida. Haydovchi smenasiz ishlaydi.
+- **GPS-monitoring uchun API** (`X-Api-Key`, `INTEGRATION_API_KEY`): `POST /api/v1/integrations/vehicle-positions`,
+  `GET/PUT /api/v1/integrations/schedule`. Ixtiyoriy sozlama: `ORDER_CODE_SECRET` (bo'sh bo'lsa `JWT_SECRET`'dan olinadi).
+- **Yangi ruxsatlar** (migratsiya 0010 mavjud xodimlarga beradi): `orders.view`, `orders.print` (GPS), `orders.close` (legal),
+  `orders.unlock` (manager); legal uchun `requests.view`.

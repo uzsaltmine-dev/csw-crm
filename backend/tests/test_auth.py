@@ -33,5 +33,5 @@ async def test_csrf_header_required(world, client_factory):
 
 async def test_role_guard(world, client_factory):
     driver = await client_factory("driver")
-    r = await driver.post("/api/v1/gps/shifts", json={"driver_id": 1, "vehicle_id": 1})
+    r = await driver.put("/api/v1/gps/schedule", json={"rows": []})
     assert r.status_code == 403

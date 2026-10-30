@@ -134,9 +134,12 @@ class Customer(TimestampMixin, Base):
     __tablename__ = "customers"
     __table_args__ = (UniqueConstraint("district_id", "name_key", name="uq_customers_district_name"),)
     id: Mapped[int] = mapped_column(primary_key=True)
-    fixed_no: Mapped[str] = mapped_column(String(20), unique=True)  # doimiy raqam, masalan A-0101
-    # STIR Excel'da yo'q — keyin yuridik bo'lim to'ldiradi; kiritilsa takrorlanmaydi
-    stir: Mapped[str | None] = mapped_column(String(9), unique=True)
+    fixed_no: Mapped[str] = mapped_column(String(20), unique=True)  # eski doimiy raqam, masalan A-0101
+    # Korxona maxsus raqami: 3 harf + 2 raqam (KTR47). STIR o'rniga — maktablar kabi tashkilotlarda STIR bir xil bo'lishi mumkin.
+    # Yangi korxonaga avtomatik beriladi (app.services.customer_code), o'zgarmaydi.
+    code: Mapped[str | None] = mapped_column(String(5), unique=True)
+    # STIR Excel'da yo'q — keyin yuridik bo'lim to'ldiradi; bir nechta tashkilotda bir xil bo'lishi mumkin
+    stir: Mapped[str | None] = mapped_column(String(9), index=True)
     name: Mapped[str] = mapped_column(String(200))
     name_key: Mapped[str] = mapped_column(String(200))  # birlashtirish uchun normallashtirilgan nom
     activity_type: Mapped[str | None] = mapped_column(String(100))
@@ -160,8 +163,8 @@ class Customer(TimestampMixin, Base):
 
     @property
     def missing_fields(self) -> list[str]:
-        """Haydovchi biriktirish uchun yetishmayotgan ma'lumotlar: 'stir', 'contract'."""
-        return [f for f, ok in (("stir", bool(self.stir)), ("contract", self.active_contract() is not None)) if not ok]
+        """Mashina biriktirish uchun yetishmayotgan ma'lumot: amaldagi shartnoma (STIR o'rniga maxsus raqam ishlatiladi)."""
+        return [] if self.active_contract() is not None else ["contract"]
 
 
 class CustomerContact(TimestampMixin, Base):
@@ -227,6 +230,24 @@ class Request(TimestampMixin, Base):
     repeat_of_id: Mapped[int | None] = mapped_column(ForeignKey("requests.id"))
     overdue_notified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     cancel_reason: Mapped[str | None] = mapped_column(String(500))
+    # Uch bosqichli jarayon: GPS mashina biriktiradi (haydovchi — kunlik ish jadvalidan)
+    vehicle_id: Mapped[int | None] = mapped_column(ForeignKey("vehicles.id"), index=True)
+
+    @property
+    def driver_name(self) -> str | None:
+        return self.driver.full_name if self.driver else None
+
+    @property
+    def stage(self) -> str:
+        """Kartaning rangi: red — mashina biriktirilmagan, yellow — chiqindi olinishi kutilmoqda, green — bajarilgan."""
+        st = self.status.value
+        if st == "new":
+            return "red"
+        if st in ("done", "suspect"):
+            return "green"
+        if st == "cancelled":
+            return "cancelled"
+        return "yellow"
 
     @property
     def overdue(self) -> bool:
@@ -238,6 +259,9 @@ class Request(TimestampMixin, Base):
     customer: Mapped[Customer] = relationship()
     contract: Mapped[Contract | None] = relationship()
     shift: Mapped[Shift | None] = relationship()
+    vehicle: Mapped[Vehicle | None] = relationship()
+    driver: Mapped[User | None] = relationship(foreign_keys=[driver_id])
+    order_form: Mapped["OrderForm | None"] = relationship(back_populates="request", uselist=False)
 
 
 class Appeal(TimestampMixin, Base):
@@ -264,6 +288,60 @@ class Appeal(TimestampMixin, Base):
     reject_reason: Mapped[str | None] = mapped_column(String(500))
     customer_id: Mapped[int | None] = mapped_column(ForeignKey("customers.id"))
     request_id: Mapped[int | None] = mapped_column(ForeignKey("requests.id"))
+
+
+class WorkSchedule(TimestampMixin, Base):
+    """Kunlik ish jadvali: GPS xodimi har tuman uchun mashinani haydovchi va xizmat turi (yuridik/jismoniy) bilan biriktiradi.
+    Kelajakdagi GPS-monitoring tizimi shu jadvalni API orqali o'qiydi va to'ldiradi."""
+    __tablename__ = "work_schedule"
+    __table_args__ = (UniqueConstraint("day", "vehicle_id", name="uq_work_schedule_day_vehicle"),)
+    id: Mapped[int] = mapped_column(primary_key=True)
+    day: Mapped[date] = mapped_column(Date, index=True)
+    district_id: Mapped[int] = mapped_column(ForeignKey("districts.id"), index=True)
+    vehicle_id: Mapped[int] = mapped_column(ForeignKey("vehicles.id"))
+    driver_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    service: Mapped[str] = mapped_column(String(12), default="legal")  # "legal" | "individual"
+    mahallas: Mapped[str | None] = mapped_column(String(500))
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    vehicle: Mapped[Vehicle] = relationship()
+    driver: Mapped[User | None] = relationship(foreign_keys=[driver_id])
+
+
+class VehiclePosition(Base):
+    """Mashinaning oxirgi joylashuvi: tashqi GPS-monitoring tizimi (API kalit bilan) yoki haydovchi plansheti yuboradi."""
+    __tablename__ = "vehicle_positions"
+    vehicle_id: Mapped[int] = mapped_column(ForeignKey("vehicles.id", ondelete="CASCADE"), primary_key=True)
+    lat: Mapped[float] = mapped_column(Float)
+    lng: Mapped[float] = mapped_column(Float)
+    at: Mapped[datetime] = mapped_column(DateTime)
+    source: Mapped[str] = mapped_column(String(20), default="monitoring")
+
+
+class OrderForm(TimestampMixin, Base):
+    """Buyurtma varaqasi (ko'rsatilgan xizmat bo'yicha buyurtma cheki): mashina biriktirilganda yaratiladi.
+    Ochiq raqam hamma ko'radi; maxfiy tasdiq kodi faqat chop etilgan qog'ozda bo'ladi, bazada — HMAC xeshi."""
+    __tablename__ = "order_forms"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[str | None] = mapped_column(String(12), unique=True)
+    request_id: Mapped[int] = mapped_column(ForeignKey("requests.id"), unique=True)
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    code_hash: Mapped[str | None] = mapped_column(String(64))
+    print_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    printed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    printed_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    reprint_allowed: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    locked: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
+    scan_key: Mapped[str | None] = mapped_column(String(255))
+    scan_content_type: Mapped[str | None] = mapped_column(String(50))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime)
+    verified_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    volume_m3: Mapped[float | None] = mapped_column(Numeric(8, 2))
+    waste_kind: Mapped[str | None] = mapped_column(String(10))  # "solid" | "liquid"
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    closed_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    closed_via: Mapped[str | None] = mapped_column(String(10))  # "form" — legal varaqa bilan, "act" — planshetdagi dalolatnoma
+    request: Mapped["Request"] = relationship(back_populates="order_form")
 
 
 class ChatMessage(TimestampMixin, Base):
@@ -378,5 +456,41 @@ class SituationRead(Base):
 __all__ = [
     "Base", "Region", "Provider", "District", "User", "Vehicle", "Shift", "Customer", "CustomerContact", "ImportBatch", "Contract",
     "Request", "NaryadCounter", "Act", "ActFile", "RequestEvent", "AppSetting", "SituationEvent", "SituationRead",
-    "UserDistrict", "UserPermission", "Appeal", "RequestSeen", "ChatMessage", "ChatRead",
+    "UserDistrict", "UserPermission", "Appeal", "RequestSeen", "ChatMessage", "ChatRead", "WorkSchedule", "VehiclePosition", "OrderForm",
 ]
+
+
+# --- korxona maxsus raqami: yangi korxonaga flush paytida avtomatik ---
+CODE_LETTERS = "ABCDEFGHJKLMNPRSTUVWXYZ"  # O, I, Q yo'q — 0 va 1 bilan adashtirilmasin
+CODE_DIGITS = "0123456789"
+
+
+def random_customer_code() -> str:
+    import secrets
+    return "".join(secrets.choice(CODE_LETTERS) for _ in range(3)) + "".join(secrets.choice(CODE_DIGITS) for _ in range(2))
+
+
+def _assign_customer_codes(session, flush_context, instances) -> None:
+    from sqlalchemy import select as _select
+    new = [o for o in session.new if isinstance(o, Customer) and not o.code]
+    if not new:
+        return
+    taken: set[str] = {o.code for o in session.new if isinstance(o, Customer) and o.code}
+    for cust in new:
+        for _ in range(50):
+            c = random_customer_code()
+            if c in taken:
+                continue
+            with session.no_autoflush:
+                if session.execute(_select(Customer.id).where(Customer.code == c)).first() is None:
+                    break
+        else:  # 1,2 mln variantdan 50 tasi band — amalda bo'lmaydi
+            raise RuntimeError("Korxona maxsus raqamini yaratib bo'lmadi")
+        cust.code = c
+        taken.add(c)
+
+
+from sqlalchemy import event as _event  # noqa: E402
+from sqlalchemy.orm import Session as _Session  # noqa: E402
+
+_event.listen(_Session, "before_flush", _assign_customer_codes)

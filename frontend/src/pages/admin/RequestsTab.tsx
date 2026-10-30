@@ -6,6 +6,7 @@ import { errorCode, errorMessage } from "@/api/client";
 import { useCan } from "@/hooks/useCan";
 import { useI18n } from "@/i18n/I18nContext";
 import { ChatButton, useChat } from "@/components/Chat";
+import { StageChip } from "@/components/Stage";
 import ChatIcon from "@mui/icons-material/ChatBubbleOutline";
 import type { MessageKey } from "@/i18n/messages";
 import { toast } from "@/lib/alerts";
@@ -107,11 +108,13 @@ export function RequestsTab({ districts }: RefData) {
                       label={chat.countFor("request", r.id)} sx={{ ml: 1, height: 20 }} />}
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontWeight={isNew ? 600 : 400}>{r.customer.name}</Typography>
+                    <Typography variant="body2" fontWeight={isNew ? 600 : 400}>{r.customer.name}
+                      {r.customer.code && <Typography component="span" sx={{ ml: 1, fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>{r.customer.code}</Typography>}</Typography>
                     <Stack direction="row" spacing={0.5} sx={{ mt: 0.25 }} flexWrap="wrap" useFlexGap><RequestChips r={r} /></Stack>
                   </TableCell>
                   <TableCell>{districtLabel(districts, r.district_id)}</TableCell>
-                  <TableCell><Chip size="small" color={STATUS_COLOR[r.status]} label={t(`s_${r.status}` as MessageKey)} /></TableCell>
+                  <TableCell><Stack direction="row" spacing={0.5} alignItems="center"><StageChip stage={r.stage} />
+                    <Chip size="small" variant="outlined" color={STATUS_COLOR[r.status]} label={t(`s_${r.status}` as MessageKey)} /></Stack></TableCell>
                   <TableCell sx={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{dt(r.created_at)}</TableCell>
                   <TableCell sx={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", color: r.overdue ? "error.main" : undefined }}>{dt(r.due_at)}</TableCell>
                 </TableRow>
@@ -173,6 +176,9 @@ function RequestDialog({ id, districts, onClose, onChanged }: { id: number; dist
             <Field label={t("rq_finished")} value={dt(d.finished_at)} />
             <Field label={t("rq_driver")} value={d.driver_name} />
             <Field label={t("naryad")} value={d.naryad_no} />
+            <Field label={t("cust_code")} value={d.customer.code} />
+            <Field label={t("of_no")} value={d.order_form?.number} />
+            <Field label={t("vehicle")} value={d.vehicle?.plate} />
             <Field label={t("rq_contract")} value={d.contract?.number} />
           </Box>
           {d.note && <Box sx={{ mt: 1.5 }}><Field label={t("rq_note")} value={d.note} /></Box>}

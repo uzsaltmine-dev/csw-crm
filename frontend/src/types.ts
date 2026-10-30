@@ -80,6 +80,8 @@ export type LocationStatus = "none" | "pending" | "confirmed";
 export interface Customer {
   id: number;
   fixed_no: string;
+  /** Korxona maxsus raqami (3 harf + 2 raqam, masalan KTR47) — STIR o'rniga */
+  code: string | null;
   stir: string | null;
   name: string;
   director: string | null;
@@ -175,7 +177,49 @@ export interface DriverTask {
   overdue?: boolean;
   is_repeat?: boolean;
   seen?: boolean | null;
+  stage?: Stage;
+  vehicle?: Vehicle | null;
+  driver_name?: string | null;
+  finished_at?: string | null;
+  order_form?: OrderFormBrief | null;
 }
+
+/** Uch bosqich: qizil — mashina biriktirilmagan, sariq — chiqindi olinishi kutilmoqda, yashil — bajarilgan */
+export type Stage = "red" | "yellow" | "green" | "cancelled";
+export interface OrderFormBrief {
+  id: number;
+  number: string;
+  printed: boolean;
+  print_count: number;
+  printed_at: string | null;
+  reprint_allowed: boolean;
+  locked: boolean;
+  attempts_left: number;
+  has_scan: boolean;
+  verified: boolean;
+  closed_at: string | null;
+  closed_via: "form" | "act" | null;
+  volume_m3: number | null;
+  waste_kind: "solid" | "liquid" | null;
+}
+/** Varaqaning qog'oz ko'rinishi (maxfiy kodsiz) */
+export interface OrderPaper {
+  form: OrderFormBrief;
+  request_number: string | null;
+  provider: string;
+  customer: { name: string; code: string | null; address: string | null };
+  vehicle: { plate: string; model: string | null } | null;
+  driver_name: string | null;
+  assigned_at: string | null;
+  waste_type: string;
+}
+export type Service = "legal" | "individual";
+export interface ScheduleRow { id?: number; vehicle_id: number; plate?: string; model?: string | null; driver_id: number | null;
+  driver_name?: string | null; service: Service; mahallas: string | null }
+export interface ScheduleDay { day: string; district_id: number; rows: ScheduleRow[];
+  vehicles: { id: number; plate: string; model: string | null }[]; drivers: { id: number; full_name: string; phone: string | null }[] }
+export interface VehicleOption { vehicle_id: number; plate: string; model: string | null; service: Service | null; driver_id: number | null;
+  driver_name: string | null; distance_m: number | null; position_at: string | null; position_source: string | null; available: boolean }
 
 export type RequestSource = "phone" | "telegram" | "excel" | "walk_in";
 export type WasteType = "household" | "construction" | "bulky" | "green" | "septic";

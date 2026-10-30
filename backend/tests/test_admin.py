@@ -1,5 +1,5 @@
 from tests.conftest import PASSWORD
-from tests.helpers import open_and_start_shift
+from tests.helpers import schedule_driver  # noqa: F401
 
 TEMP = "Vaqtincha123"
 
@@ -21,13 +21,13 @@ async def test_new_user_must_change_password_first(world, client_factory):
     c = await client_factory()
     me = (await c.post("/api/v1/auth/login", json={"username": "drv9", "password": TEMP})).json()
     assert me["must_change_password"] is True
-    r = await c.get("/api/v1/driver/shift/current")
+    r = await c.get("/api/v1/driver/today")
     assert r.status_code == 403 and r.json()["error"]["code"] == "password_change_required"
     r = await c.post("/api/v1/auth/change-password", json={"current_password": TEMP, "new_password": "12345678"})
     assert r.json()["error"]["code"] == "weak_password"
     r = await c.post("/api/v1/auth/change-password", json={"current_password": TEMP, "new_password": "Yangi2026parol"})
     assert r.status_code == 200 and r.json()["must_change_password"] is False
-    assert (await c.get("/api/v1/driver/shift/current")).status_code == 200
+    assert (await c.get("/api/v1/driver/today")).status_code == 200
 
 
 async def test_role_requires_district_and_unique_username(world, client_factory):
@@ -47,15 +47,6 @@ async def test_deactivated_user_cannot_login_or_use_session(world, client_factor
     assert (await driver.get("/api/v1/auth/me")).status_code == 401  # mavjud sessiya ham to'xtaydi
     c = await client_factory()
     assert (await c.post("/api/v1/auth/login", json={"username": "driver", "password": PASSWORD})).status_code == 401
-
-
-async def test_cannot_deactivate_driver_with_open_shift(world, client_factory):
-    admin, gps, driver = await client_factory("admin"), await client_factory("gps"), await client_factory("driver")
-    await open_and_start_shift(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
-    r = await admin.patch(f"/api/v1/admin/users/{world['users']['driver']}", json={"is_active": False})
-    assert r.status_code == 409 and r.json()["error"]["code"] == "driver_has_open_shift"
-    r = await admin.patch(f"/api/v1/admin/vehicles/{world['vehicles']['v1']}", json={"is_active": False})
-    assert r.json()["error"]["code"] == "vehicle_busy"
 
 
 async def test_admin_cannot_lock_themselves_out(world, client_factory):
@@ -104,9 +95,9 @@ async def test_radius_setting_changes_act_result(world, client_factory):
     from tests.helpers import fill_act
     admin, gps, driver = await client_factory("admin"), await client_factory("gps"), await client_factory("driver")
     await admin.put("/api/v1/admin/settings", json={"gps_radius_m": 150})
-    await open_and_start_shift(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
+    await schedule_driver(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
     rid = world["requests"][0]
-    await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"driver_id": world["users"]["driver"]})
+    await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"vehicle_id": world["vehicles"]["v1"]})
     await driver.post(f"/api/v1/driver/requests/{rid}/enroute")
     at_200m = {"lat": 40.6433, "lng": 72.2390}  # korxonadan ~200 m
     await fill_act(driver, rid, at_200m)

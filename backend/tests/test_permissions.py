@@ -1,5 +1,5 @@
 """Huquqlar: admin → manager (bo'lim/amal + tumanlar), manager → o'z xodimlari, admin tasdig'i, tuman radiusi, Vaziyat."""
-from tests.helpers import fill_act, open_and_start_shift
+from tests.helpers import fill_act, schedule_driver
 from tests.test_customers import _import
 
 ACT = {"containers": 1, "volume_m3": 2, "note": "Olib ketildi"}
@@ -35,7 +35,7 @@ async def test_me_has_permissions_and_scope(world, client_factory):
     me = (await admin.get("/api/v1/auth/me")).json()
     assert "staff.permissions" in me["permissions"] and me["district_ids"] == []
     me = (await mgr.get("/api/v1/auth/me")).json()
-    assert me["permissions"] == sorted(["chat.view", "chat.write", "customers.view", "customers.location_confirm", "staff.view", "vehicles.view", "settings.view",
+    assert me["permissions"] == sorted(["chat.view", "chat.write", "orders.view", "orders.unlock", "customers.view", "customers.location_confirm", "staff.view", "vehicles.view", "settings.view",
                                         "requests.view", "stats.view"])
     assert me["district_ids"] == sorted(world["districts"].values())
     assert (await gps.get("/api/v1/auth/me")).json()["district_ids"] == [world["districts"]["a"]]
@@ -132,10 +132,10 @@ async def test_district_radius_is_used_for_acts(world, client_factory):
     assert ev["params"] == {"name": "Asaka tumani", "old": 300, "new": 100} and ev["actor_name"] == "Manager A"
     # ~150 m — umumiy 300 m da "done" bo'lardi, tuman radiusi 100 m da "suspect"
     gps, driver = await client_factory("gps"), await client_factory("driver")
-    await open_and_start_shift(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
+    await schedule_driver(gps, driver, world["users"]["driver"], world["vehicles"]["v1"])
     rid = world["requests"][0]
     at = {"lat": 40.64285, "lng": 72.2390}
-    await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"driver_id": world["users"]["driver"]})
+    await gps.post(f"/api/v1/gps/requests/{rid}/assign", json={"vehicle_id": world["vehicles"]["v1"]})
     await driver.post(f"/api/v1/driver/requests/{rid}/enroute")
     await fill_act(driver, rid, at)
     body = (await driver.post(f"/api/v1/driver/requests/{rid}/complete", json={**ACT, **at})).json()
@@ -165,8 +165,8 @@ async def test_legal_and_operator_get_multiple_districts(world, client_factory):
     r = await admin.post("/api/v1/admin/users", json={"username": "op1", "full_name": "Operator", "role": "operator",
                                                       "district_ids": [a, b], "password": "Vaqtincha1"})
     assert r.status_code == 201 and r.json()["district_ids"] == [a, b]
-    assert r.json()["permissions"] == ["appeals.create", "appeals.view", "chat.view", "chat.write", "customers.view", "requests.create",
-                                       "requests.view"]
+    assert r.json()["permissions"] == ["appeals.create", "appeals.view", "chat.view", "chat.write", "customers.view", "orders.view",
+                                       "requests.create", "requests.view"]
     uid = r.json()["id"]
     r = await admin.put(f"/api/v1/admin/users/{uid}/access", json={"permissions": ["customers.view"], "district_ids": [b]})
     assert r.json()["district_ids"] == [b]

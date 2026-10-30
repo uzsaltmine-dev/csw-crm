@@ -1,15 +1,19 @@
 import { api } from "./client";
 import { clearTokens, saveTokens, type Tokens } from "@/lib/session";
 import { closeSocket } from "@/lib/socket";
-import type { Access, AdminUser, Appeal, ChatMessage, ChatThread, ChatThreadType, ChatUnread, RequestDetail, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
-  GpsDriver, ImportBatch, ImportResult, LocationStatus, Region, Role, Shift, SituationEvent, SituationLevel, User, Vehicle } from "@/types";
+import type { Access, AdminUser, Appeal, OrderFormBrief, OrderPaper, ScheduleDay, ScheduleRow, Service, VehicleOption, ChatMessage, ChatThread, ChatThreadType, ChatUnread, RequestDetail, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
+  ImportBatch, ImportResult, LocationStatus, Region, Role, SituationEvent, SituationLevel, User } from "@/types";
 
 export const gpsApi = {
-  drivers: () => api.get<GpsDriver[]>("/gps/drivers").then((r) => r.data),
-  freeVehicles: () => api.get<Vehicle[]>("/gps/vehicles", { params: { free: true } }).then((r) => r.data),
-  openShift: (driver_id: number, vehicle_id: number) => api.post<Shift>("/gps/shifts", { driver_id, vehicle_id }).then((r) => r.data),
   newRequests: () => api.get<DriverTask[]>("/gps/requests").then((r) => r.data),
-  assign: (requestId: number, driver_id: number) => api.post<DriverTask>(`/gps/requests/${requestId}/assign`, { driver_id }).then((r) => r.data),
+  vehicleOptions: (requestId: number) =>
+    api.get<{ customer_has_location: boolean; items: VehicleOption[] }>(`/gps/requests/${requestId}/vehicles`).then((r) => r.data),
+  assign: (requestId: number, vehicle_id: number) => api.post<DriverTask>(`/gps/requests/${requestId}/assign`, { vehicle_id }).then((r) => r.data),
+  schedule: (day?: string) => api.get<ScheduleDay>("/gps/schedule", { params: { day } }).then((r) => r.data),
+  saveSchedule: (rows: ScheduleRow[], day?: string) => api.put<ScheduleRow[]>("/gps/schedule", {
+    rows: rows.map(({ vehicle_id, driver_id, service, mahallas }) => ({ vehicle_id, driver_id, service, mahallas })) }, { params: { day } })
+    .then((r) => r.data),
+  copySchedule: (from_day: string) => api.post<ScheduleRow[]>("/gps/schedule/copy", null, { params: { from_day } }).then((r) => r.data),
 };
 
 export const authApi = {
@@ -53,16 +57,9 @@ export const adminApi = {
 };
 
 export const driverApi = {
-  currentShift: () => api.get<Shift | null>("/driver/shift/current").then((r) => r.data),
-  startShift: (id: number, odometer: number, fuel: number, photo: Blob) => {
-    const fd = new FormData();
-    fd.append("odometer", String(odometer));
-    fd.append("fuel", String(fuel));
-    fd.append("photo", photo, "vehicle.jpg");
-    return api.post<Shift>(`/driver/shift/${id}/start`, fd).then((r) => r.data);
-  },
-  endShift: (id: number, odometer: number, fuel: number) =>
-    api.post<Shift>(`/driver/shift/${id}/end`, { odometer, fuel }).then((r) => r.data),
+  today: () => api.get<{ day: string; vehicle: { id: number; plate: string; model: string | null } | null; service: Service | null }>(
+    "/driver/today").then((r) => r.data),
+  done: () => api.get<DriverTask[]>("/driver/done").then((r) => r.data),
   tasks: () => api.get<DriverTask[]>("/driver/tasks").then((r) => r.data),
   enroute: (id: number) => api.post<DriverTask>(`/driver/requests/${id}/enroute`).then((r) => r.data),
   upload: (id: number, kind: FileKind, file: Blob, coords?: Coords | null) => {
@@ -121,7 +118,7 @@ export type AppealCreate = OrderFields & { district_id: number; org_name: string
 export const requestsApi = {
   detail: (id: number) => api.get<RequestDetail>(`/requests/${id}`).then((r) => r.data),
   markSeen: (request_ids: number[]) => api.post("/requests/seen", { request_ids }),
-  list: (params: { mine?: boolean; overdue?: boolean; repeat?: boolean; status?: string; district_id?: number; waste_type?: string;
+  list: (params: { stage?: "red" | "yellow" | "green"; mine?: boolean; overdue?: boolean; repeat?: boolean; status?: string; district_id?: number; waste_type?: string;
     date_from?: string; date_to?: string; q?: string; limit?: number; offset?: number }) =>
     api.get<{ items: RequestItem[]; total: number }>("/requests", { params }).then((r) => r.data),
   openFor: (customer_id: number) => api.get<RequestItem[]>("/requests/open", { params: { customer_id } }).then((r) => r.data),
@@ -176,4 +173,21 @@ export const chatApi = {
   unread: () => api.get<ChatUnread>("/chat/unread").then((r) => r.data),
   /** Audio tab rejimida ham (Bearer) ishlashi uchun axios orqali blob bo'lib olinadi */
   audio: (messageId: number) => api.get<Blob>(`/chat/audio/${messageId}`, { responseType: "blob" }).then((r) => r.data),
+};
+
+export const ordersApi = {
+  paper: (id: number) => api.get<OrderPaper>(`/order-forms/${id}`).then((r) => r.data),
+  /** PDF faqat chop etish uchun (maxfiy kod shu faylda) — ekranda ko'rsatilmaydi */
+  print: (id: number) => api.post<Blob>(`/order-forms/${id}/print`, null, { responseType: "blob", timeout: 60_000 }).then((r) => r.data),
+  allowReprint: (id: number) => api.post<OrderFormBrief>(`/order-forms/${id}/allow-reprint`).then((r) => r.data),
+  unlock: (id: number) => api.post<OrderFormBrief>(`/order-forms/${id}/unlock`).then((r) => r.data),
+  uploadScan: (id: number, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file, file.name);
+    return api.post<OrderFormBrief>(`/order-forms/${id}/scan`, fd, { timeout: 60_000 }).then((r) => r.data);
+  },
+  scan: (id: number) => api.get<Blob>(`/order-forms/${id}/scan`, { responseType: "blob" }).then((r) => r.data),
+  verify: (id: number, code: string) => api.post<OrderPaper>(`/order-forms/${id}/verify`, { code }).then((r) => r.data),
+  close: (id: number, volume_m3: number, waste_kind: "solid" | "liquid") =>
+    api.post<RequestItem>(`/order-forms/${id}/close`, { volume_m3, waste_kind }).then((r) => r.data),
 };

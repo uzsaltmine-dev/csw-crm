@@ -31,6 +31,7 @@ class CsrfHeaderMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if (request.method not in SAFE and request.url.path.startswith("/api/")
                 and not request.headers.get("authorization")
+                and not (request.url.path.startswith("/api/v1/integrations/") and request.headers.get("x-api-key"))
                 and request.headers.get("x-requested-with") != "csw"):
             return JSONResponse(status_code=403, content={"error": {"code": "csrf", "message": "X-Requested-With sarlavhasi yo'q"}})
         return await call_next(request)

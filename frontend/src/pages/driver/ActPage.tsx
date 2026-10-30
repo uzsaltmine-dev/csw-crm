@@ -35,7 +35,6 @@ export function ActPage() {
   const dispatch = useAppDispatch();
   const online = useOnline();
   const user = useAppSelector((s) => s.auth.user)!;
-  const shift = useAppSelector((s) => s.driver.shift);
   const task = useAppSelector((s) => s.driver.tasks.find((x) => x.id === requestId));
   const [draft, setDraft] = useState<Draft>(() => loadDraft(requestId));
   const [busy, setBusy] = useState(false);
@@ -58,15 +57,15 @@ export function ActPage() {
 
   const files = new Set<FileKind>(task?.files ?? []);
   const fields = {
-    before: files.has("before"), gps: !!geo.coords, date: true, plate: !!shift, driver: true, naryad: !!task?.naryad_no,
-    contract: !!task?.contract, inn: !!task?.customer.stir, containers: Number(draft.containers) >= 1,
+    before: files.has("before"), gps: !!geo.coords, date: true, plate: !!task?.vehicle, driver: true, naryad: !!task?.naryad_no,
+    contract: !!task?.contract, inn: !!task?.customer.code, containers: Number(draft.containers) >= 1,
     note: draft.note.trim().length > 0, volume: Number(draft.volume) > 0, sign: files.has("sign"), face: files.has("face"),
   };
   // 13 maydon formada; 14-si — "chiqindi olib ketildi" rasmi (joylashuvi bilan) oxirgi tugma orqali olinadi
   const filled = Object.values(fields).filter(Boolean).length;
   const formReady = filled === Object.keys(fields).length;
 
-  if (!task || !shift) {
+  if (!task) {
     return <Alert severity="info" action={<Button onClick={() => nav("/driver")}>{t("back")}</Button>}>{t("no_tasks")}</Alert>;
   }
   const c = task.customer;
@@ -157,11 +156,11 @@ export function ActPage() {
         <Step n={2} title={t("step2")} ok={fields.containers && fields.volume && fields.note}>
           <Stack spacing={0.5} sx={{ mb: 2 }}>
             {autoRow("f_date", formatDateTime(new Date()))}
-            {autoRow("f_plate", shift.vehicle.plate)}
+            {autoRow("f_plate", task.vehicle?.plate)}
             {autoRow("f_driver", `${user.full_name} · ${user.phone ?? ""}`)}
             {autoRow("naryad", task.naryad_no)}
             {autoRow("f_contract", task.contract ? `${task.contract.number} · ${task.contract.signed_on ?? ""}` : "—")}
-            {autoRow("f_inn", task.customer.stir)}
+            {autoRow("f_inn", task.customer.code)}
           </Stack>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
             <TextField id="containers" label={t("f_cont")} type="number" value={draft.containers} fullWidth
