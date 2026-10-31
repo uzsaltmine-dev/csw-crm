@@ -34,6 +34,8 @@ class Provider(Base):
     bank: Mapped[str | None] = mapped_column(String(150))
     mfo: Mapped[str | None] = mapped_column(String(5))
     account: Mapped[str | None] = mapped_column(String(20))
+    phone: Mapped[str | None] = mapped_column(String(30))
+    oked: Mapped[str | None] = mapped_column(String(10))
     director: Mapped[str | None] = mapped_column(String(150))
     chief_accountant: Mapped[str | None] = mapped_column(String(150))
     region: Mapped[Region] = relationship()
@@ -155,7 +157,14 @@ class Customer(TimestampMixin, Base):
     director: Mapped[str | None] = mapped_column(String(150))
     phone: Mapped[str | None] = mapped_column(String(30))
     district_id: Mapped[int] = mapped_column(ForeignKey("districts.id"), index=True)
-    address: Mapped[str | None] = mapped_column(String(255))
+    address: Mapped[str | None] = mapped_column(String(255))  # obyekt (xizmat ko'rsatiladigan joy) manzili
+    # Rekvizitlar (shartnoma uchun)
+    legal_address: Mapped[str | None] = mapped_column(String(255))
+    bank: Mapped[str | None] = mapped_column(String(150))
+    mfo: Mapped[str | None] = mapped_column(String(5))
+    account: Mapped[str | None] = mapped_column(String(20))
+    oked: Mapped[str | None] = mapped_column(String(10))
+    cadastre: Mapped[str | None] = mapped_column(String(40))
     lat: Mapped[float | None] = mapped_column(Float)
     lng: Mapped[float | None] = mapped_column(Float)
     location_status: Mapped[LocationStatus] = mapped_column(enum_col(LocationStatus), default=LocationStatus.none, server_default="none")
@@ -169,6 +178,12 @@ class Customer(TimestampMixin, Base):
         """Bugun amal qiladigan shartnoma (contracts oldindan yuklangan bo'lishi kerak)."""
         today = today or date.today()
         return next((c for c in reversed(self.contracts) if c.is_active and c.valid_from <= today <= c.valid_to), None)
+
+    @property
+    def new_contract(self) -> bool:
+        """GPS kartasida «Yangi shartnoma» belgisi: amaldagi shartnoma oxirgi 30 kunda imzolangan."""
+        from app.services.contracts import is_new
+        return is_new(self.active_contract())
 
     @property
     def missing_fields(self) -> list[str]:
@@ -208,6 +223,42 @@ class Contract(TimestampMixin, Base):
     valid_from: Mapped[date] = mapped_column(Date)
     valid_to: Mapped[date] = mapped_column(Date)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # «Yangi shartnoma» jarayoni: draft → signed (faol, buxgalteriya tasdig'ini kutadi) → approved; signed → returned → signed.
+    # Hisob-kitob (faktura, debitor) faqat approved. Eski/qo'lda kiritilgan shartnomalar — approved.
+    status: Mapped[str] = mapped_column(String(10), default="approved", server_default="approved", index=True)
+    annual_volume: Mapped[float | None] = mapped_column(Numeric(12, 2))  # yillik hajm, m³
+    annual_trips: Mapped[int | None] = mapped_column(Integer)  # reys bo'yicha shartnomada yillik reyslar soni
+    place: Mapped[str | None] = mapped_column(String(100))  # tuzilgan joyi
+    sign_method: Mapped[str | None] = mapped_column(String(10))  # electronic | paper
+    platform: Mapped[str | None] = mapped_column(String(15))  # didox | hujjat | soliq | other
+    platform_id: Mapped[str | None] = mapped_column(String(40))
+    scan_key: Mapped[str | None] = mapped_column(String(200))
+    scan_name: Mapped[str | None] = mapped_column(String(150))
+    scan_type: Mapped[str | None] = mapped_column(String(60))
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime)
+    approved_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    return_comment: Mapped[str | None] = mapped_column(String(500))
+    created_by_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    customer: Mapped["Customer"] = relationship(viewonly=True)
+    events: Mapped[list["ContractEvent"]] = relationship(order_by="ContractEvent.id", cascade="all, delete-orphan")
+
+    @property
+    def display_number(self) -> str:
+        """Platforma (Didox / hujjat.uz) raqami bo'lsa — o'sha, aks holda ichki raqam."""
+        return self.platform_id or self.number
+
+
+class ContractEvent(Base):
+    """Shartnoma tarixi: kim, qachon, nima qildi (created, edited, signed, approved, returned, resubmitted)."""
+    __tablename__ = "contract_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    contract_id: Mapped[int] = mapped_column(ForeignKey("contracts.id", ondelete="CASCADE"), index=True)
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    action: Mapped[str] = mapped_column(String(15))
+    comment: Mapped[str | None] = mapped_column(String(500))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    actor: Mapped["User | None"] = relationship(lazy="selectin")
 
 
 class Request(TimestampMixin, Base):
@@ -492,7 +543,7 @@ class SituationRead(Base):
 
 __all__ = [
     "Base", "Region", "Provider", "District", "User", "Vehicle", "Shift", "Customer", "CustomerContact", "ImportBatch", "Contract",
-    "Request", "NaryadCounter", "Act", "ActFile", "RequestEvent", "AppSetting", "SituationEvent", "SituationRead",
+    "ContractEvent", "Request", "NaryadCounter", "Act", "ActFile", "RequestEvent", "AppSetting", "SituationEvent", "SituationRead",
     "UserDistrict", "UserPermission", "Appeal", "RequestSeen", "WorkSchedule", "VehiclePosition", "OrderForm", "Payment", "Invoice", "InvoiceLine",
 ]
 

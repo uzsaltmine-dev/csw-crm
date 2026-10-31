@@ -225,6 +225,7 @@ class CustomerOut(ORM):
     lng: float | None
     location_status: LocationStatus
     missing_fields: list[str] = []  # 'stir', 'contract' — bo'lsa haydovchi biriktirilmaydi
+    new_contract: bool = False  # oxirgi 30 kunda imzolangan shartnoma (GPS belgisi)
 
 
 class ContractOut(ORM):
@@ -339,6 +340,10 @@ class ContractFullOut(ContractOut):
     valid_from: date
     valid_to: date
     is_active: bool
+    status: str = "approved"
+    platform_id: str | None = None
+    display_number: str | None = None
+    annual_volume: Decimal | None = None
 
 
 class CustomerListOut(CustomerOut):
@@ -348,6 +353,12 @@ class CustomerListOut(CustomerOut):
 
 
 class CustomerDetailOut(CustomerListOut):
+    legal_address: str | None = None
+    bank: str | None = None
+    mfo: str | None = None
+    account: str | None = None
+    oked: str | None = None
+    cadastre: str | None = None
     contacts: list[ContactOut]
     contracts: list[ContractFullOut]
     created_at: datetime

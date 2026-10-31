@@ -90,7 +90,9 @@ async def generate(db: AsyncSession, actor: User, month: date) -> dict:
                                          qty=x["qty"], unit=x["unit"], price=x["price"], amount=x["amount"]))
         await db.flush()
     await db.commit()
-    return {"month": start, "created": created, "updated": updated, "skipped_sent": skipped_sent}
+    # Imzolangan, lekin buxgalter tasdiqlamagan shartnomalar bo'yicha varaqalar fakturaga kirmadi — ogohlantirish
+    pending = sum(1 for c in custs for g in led.greens[c.id] if g.pending and start <= g.day <= end)
+    return {"month": start, "created": created, "updated": updated, "skipped_sent": skipped_sent, "pending_forms": pending}
 
 
 def link(inv: Invoice) -> str:

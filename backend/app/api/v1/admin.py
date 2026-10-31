@@ -166,7 +166,7 @@ async def put_district_radius(district_id: int, body: DistrictRadiusIn, user: Us
 
 
 # --- xizmat ko'rsatuvchi rekvizitlari (schyot-faktura uchun) ---
-PROVIDER_FIELDS = ("full_name", "inn", "address", "bank", "mfo", "account", "director", "chief_accountant")
+PROVIDER_FIELDS = ("full_name", "inn", "address", "phone", "bank", "mfo", "account", "oked", "director", "chief_accountant")
 
 
 class ProviderIn(BaseModel):
@@ -178,6 +178,8 @@ class ProviderIn(BaseModel):
     account: str | None = Field(None, pattern=r"^\d{20}$")
     director: str | None = Field(None, max_length=150)
     chief_accountant: str | None = Field(None, max_length=150)
+    phone: str | None = Field(None, max_length=30)
+    oked: str | None = Field(None, pattern=r"^\d{4,5}$")
 
 
 def _prov(p: Provider) -> dict:

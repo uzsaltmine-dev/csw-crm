@@ -216,3 +216,29 @@ Batafsil kelishuvlar: `docs/plans/three-stage-flow.md`.
 - **Admin → Sozlamalar → Rekvizitlar**: har viloyat xizmat ko'rsatuvchisining to'liq nomi, STIR, manzil, bank, MFO, hisob raqam,
   rahbar, bosh buxgalter (fakturaga chiqadi). Demo qiymatlar haqiqiy emas. API: `GET/PUT /api/v1/admin/providers`.
 - Didox / Soliq e-faktura integratsiyasi keyingi bosqichda (ERI kaliti kerak).
+
+## «Yangi shartnoma» jarayoni (PR #17)
+
+- **Legal → «Yangi shartnoma»** (`customers.contract`) — 3 bosqichli usta:
+  1. korxona: mavjudini qidirish (nom, maxsus raqam, STIR) yoki yangisini qo'shish;
+  2. rekvizitlar (direktor, yuridik manzil, obyekt manzili, kadastr, bank, MFO, hisob raqam, OKED) va shartlar
+     (tur, narx QQS bilan, yillik hajm m³ / yillik reyslar, muddat, tuzilgan joyi, imzo usuli) → «Tekshirish»
+     (maydonlar bo'yicha xatolar, ustma-ust faol shartnoma) → jami, QQS 12% (ichida), summa so'z bilan → «Saqlash va raqam olish»;
+  3. hujjat: PDF (chop etish) va Word (.docx — Didox / hujjat.uz'ga yuklash) → «Imzolandi — buxgalteriyaga yuborish».
+- Ichki raqam viloyat bo'yicha avtomatik: `BTE-2026/00001`, `BTK-2026/00001`. Elektron imzoda platforma (Didox, hujjat.uz,
+  my.soliq) va hujjat ID'si majburiy, imzolangan PDF yoki skan ixtiyoriy. Platforma ID bo'lsa fakturada va ro'yxatlarda u ko'rinadi.
+- Shablon viloyat bo'yicha: Andijon (`BTE`) — «Ommaviy shartnoma» (hujjat.uz namunasi), Surxondaryo (`BTK`) va boshqalar —
+  Didox namunasi. Matn namunalardan olingan; tomonlar, jadval, summa va sanalar formadan qo'yiladi
+  (`backend/app/services/contract_templates.py`). Repoda haqiqiy korxona ma'lumotlari yo'q.
+- Holatlar: `draft` → `signed` (faol: murojaat ochiladi, GPS ko'radi) → `approved` (buxgalter). Buxgalter izoh bilan qaytarsa —
+  `returned` (faol qoladi), legal tuzatib qayta yuboradi. Har qadam tarixda (`contract_events`).
+- Hisob-kitob (faktura, debitor) **faqat tasdiqlangan** shartnoma bo'yicha. Tasdiqlanmagan shartnoma varaqalari «Buyurtma
+  varaqalari»da «tasdiq kutilmoqda»; «Oyni yopish»da ogohlantirish. Yillik hajmdan foydalanish: 90% va 100% dan oshganda belgi.
+- «Shartnomalar» tabi: legal — barcha holatlar (sariq — kutilmoqda, qizil — qaytarilgan, yashil — tasdiqlangan);
+  buxgalter — standart «Tasdiq kutilmoqda» navbati, «Tasdiqlash» / «Izoh bilan qaytarish».
+- GPS va legal kartalarida 30 kun davomida «Yangi shartnoma» belgisi.
+- Admin → Sozlamalar → Rekvizitlar: telefon va OKED qo'shildi (shartnomaga chiqadi).
+- API: `POST /api/v1/contracts/check`, `POST /api/v1/contracts`, `PUT/DELETE /api/v1/contracts/{id}`,
+  `GET /api/v1/contracts?status=&q=`, `GET /api/v1/contracts/{id}/document?format=pdf|docx`, `POST /api/v1/contracts/{id}/sign`
+  (multipart), `GET /api/v1/contracts/{id}/scan`, `POST /api/v1/contracts/{id}/approve`, `POST /api/v1/contracts/{id}/return`.
+  Migratsiya 0014. Keyingi: «Qo'shimcha kelishuv», Didox / hujjat.uz integratsiyasi (ERI).

@@ -78,8 +78,9 @@ export function SettingsTab(_: RefData) {
 }
 
 const REQ_FIELDS: { k: keyof ProviderReq; w: number; pattern?: RegExp }[] = [
-  { k: "full_name", w: 2 }, { k: "inn", w: 1, pattern: /^\d{9}$/ }, { k: "address", w: 3 }, { k: "bank", w: 2 }, { k: "mfo", w: 1, pattern: /^\d{5}$/ },
-  { k: "account", w: 2, pattern: /^\d{20}$/ }, { k: "director", w: 2 }, { k: "chief_accountant", w: 2 },
+  { k: "full_name", w: 2 }, { k: "inn", w: 1, pattern: /^\d{9}$/ }, { k: "address", w: 2 }, { k: "phone", w: 1 }, { k: "bank", w: 2 },
+  { k: "mfo", w: 1, pattern: /^\d{5}$/ }, { k: "account", w: 2, pattern: /^\d{20}$/ }, { k: "oked", w: 1, pattern: /^\d{4,5}$/ },
+  { k: "director", w: 2 }, { k: "chief_accountant", w: 1 },
 ];
 
 /** Xizmat ko'rsatuvchi (viloyat bo'yicha) rekvizitlari — schyot-faktura PDF'iga chiqadi. Tahrirlash — faqat admin. */

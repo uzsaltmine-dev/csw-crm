@@ -13,7 +13,7 @@ from app.core.permissions import apply_template
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.services.schedule import today as schedule_today
-from app.models import AppSetting, Contract, Customer, District, Provider, Region, OrderForm, Payment, Request, RequestEvent, User, VehiclePosition, WorkSchedule, UserDistrict, Vehicle
+from app.models import AppSetting, Contract, ContractEvent, Customer, District, Provider, Region, OrderForm, Payment, Request, RequestEvent, User, VehiclePosition, WorkSchedule, UserDistrict, Vehicle
 from app.db.base import utcnow
 from app.models.enums import ContractType, LocationStatus, RequestStatus, Role, WasteType
 
@@ -56,7 +56,8 @@ async def seed() -> None:
             k = len(district_ids) + 1
             db.add(Provider(name=prov_name, code=code, region_id=region.id, full_name=f'"{prov_name}" MChJ (demo)',
                             inn=f"30{k:07d}", address=f"{region_name}, demo ko'chasi, {k}-uy", bank="DEMO bank AT",
-                            mfo="00000", account=f"2020800000000000{k:04d}", director="Demo Direktor", chief_accountant="Demo Bosh buxgalter"))
+                            mfo="00000", account=f"2020800000000000{k:04d}", director="Demo Direktor", chief_accountant="Demo Bosh buxgalter",
+                            phone="+998 00 000-00-00", oked="38210"))
             for d_name, lat, lng in districts:
                 n += 1
                 d = District(name=d_name, region_id=region.id)
@@ -82,7 +83,10 @@ async def seed() -> None:
                 c = Customer(fixed_no=f"A-{100 + n:04d}", stir=f"{300000000 + n * 1111:09d}", name=f"\"Namuna {n}\" MChJ",
                              name_key=f"namuna {n} mchj", location_status=LocationStatus.confirmed, activity_type="Savdo",
                              director="Namuna rahbar", phone="+998 91 111-11-11", district_id=d.id,
-                             address="Mustaqillik ko'chasi, 1-uy", lat=lat + 0.002, lng=lng + 0.002)
+                             address="Mustaqillik ko'chasi, 1-uy", lat=lat + 0.002, lng=lng + 0.002,
+                             # DEMO rekvizitlar (haqiqiy emas)
+                             legal_address=f"{d_name}, Mustaqillik ko'chasi, {n}-uy", bank="DEMO bank AT", mfo="00000",
+                             account=f"2020800000{n:010d}", oked="56290")
                 db.add(c)
                 await db.flush()
                 # Debitor/kreditor namunasi uchun turli shartnoma turlari va narxlari
@@ -91,7 +95,14 @@ async def seed() -> None:
                 # Yangi shartnomalar statistikasi uchun imzolangan sanalar har xil (7/15/30/182/365 kun)
                 signed_back = (3, 12, 25, 60, 150, 300)[n % 6]
                 ct = Contract(customer_id=c.id, number=f"SH-2026/{n:04d}", signed_on=date.today() - timedelta(days=signed_back),
-                              type=ctype, price=price, valid_from=date.today() - timedelta(days=120), valid_to=date.today() + timedelta(days=365))
+                              type=ctype, price=price, valid_from=date.today() - timedelta(days=120), valid_to=date.today() + timedelta(days=365),
+                              annual_volume=40, place=d_name, sign_method="electronic")
+                if signed_back == 3:
+                    # «Yangi shartnoma» jarayonidan o'tgan, buxgalter tasdig'ini kutayotgan shartnoma (GPS'da «Yangi shartnoma» belgisi)
+                    ct.status, ct.platform, ct.platform_id = "signed", "didox", f"DEMO{n:08d}"
+                    ct.signed_at, ct.created_by_id = utcnow() - timedelta(days=3), legal.id
+                    ct.events = [ContractEvent(actor_id=legal.id, action="created", created_at=utcnow() - timedelta(days=4)),
+                                 ContractEvent(actor_id=legal.id, action="signed", created_at=utcnow() - timedelta(days=3))]
                 db.add(ct)
                 await db.flush()
                 now = utcnow()

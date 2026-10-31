@@ -15,6 +15,7 @@ import { toast } from "@/lib/alerts";
 import type { InvoiceItem, MonthForm, MonthFormCustomer } from "@/types";
 import type { RefData } from "./AdminHome";
 import { fmtM3, fmtMoney } from "./CompaniesTab";
+import { UsageBar } from "./ContractsTab";
 
 /** "YYYY-MM" — Toshkent vaqti bo'yicha; shift = -1 o'tgan oy */
 export const monthIso = (shift = 0) => {
@@ -84,13 +85,18 @@ export function OrderFormsTab({ districts }: RefData) {
         <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>{t("inv_by_company")}</Typography>
         <TableContainer><Table size="small" id="of-customers">
           <TableHead><TableRow><TableCell>{t("cmp_name")}</TableCell><TableCell>{t("cust_code")}</TableCell><TableCell>{t("district")}</TableCell>
-            <TableCell align="right">{t("inv_forms_count")}</TableCell><TableCell align="right">{t("inv_amount")}</TableCell></TableRow></TableHead>
+            <TableCell align="right">{t("inv_forms_count")}</TableCell><TableCell>{t("ctr_usage")}</TableCell>
+            <TableCell align="right">{t("inv_amount")}</TableCell></TableRow></TableHead>
           <TableBody>
             {custs.map((c) => <TableRow key={c.customer_id} hover data-row={c.code}>
               <TableCell>{c.name}</TableCell><TableCell sx={{ fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>{c.code}</TableCell>
               <TableCell>{districts.find((d) => d.id === c.district_id)?.name}</TableCell>
-              <TableCell align="right">{c.forms}</TableCell><TableCell align="right" sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>{fmtMoney(c.total)}</TableCell></TableRow>)}
-            {!custs.length && <TableRow><TableCell colSpan={5}><Typography color="text.secondary">{t("inv_none")}</Typography></TableCell></TableRow>}
+              <TableCell align="right">{c.forms}{c.pending ? <Chip size="small" label={t("of_pending_n", { n: c.pending })} sx={{ ml: 0.5, height: 18,
+                bgcolor: STAGE.yellow.bg, color: STAGE.yellow.ink }} /> : null}</TableCell>
+              <TableCell>{c.usage ? <UsageBar c={{ used_m3: c.usage.used, annual_volume: c.usage.annual, usage_pct: c.usage.pct, usage_level: c.usage.level }} />
+                : <Typography variant="caption" color="text.secondary">—</Typography>}</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 600, whiteSpace: "nowrap" }}>{fmtMoney(c.total)}</TableCell></TableRow>)}
+            {!custs.length && <TableRow><TableCell colSpan={6}><Typography color="text.secondary">{t("inv_none")}</Typography></TableCell></TableRow>}
           </TableBody>
         </Table></TableContainer>
       </Paper>
@@ -104,7 +110,8 @@ export function OrderFormsTab({ districts }: RefData) {
             <TableCell align="right">{t("inv_price")}</TableCell><TableCell align="right">{t("inv_amount")}</TableCell>
           </TableRow></TableHead>
           <TableBody>
-            {items.map((x) => <TableRow key={x.request_id} hover data-form={x.number}>
+            {items.map((x) => <TableRow key={x.request_id} hover data-form={x.number} data-pending={x.pending || undefined}
+              sx={x.pending ? { bgcolor: "#FFFBCC" } : undefined}>
               <TableCell sx={{ whiteSpace: "nowrap" }}>{dmy(x.day)}</TableCell>
               <TableCell>{x.customer_name} <Typography component="span" variant="caption" sx={{ fontFamily: "ui-monospace, monospace" }}>{x.code}</Typography></TableCell>
               <TableCell>{x.number}</TableCell><TableCell sx={{ fontFamily: "ui-monospace, monospace" }}>{x.form_number ?? "—"}</TableCell>
@@ -112,7 +119,9 @@ export function OrderFormsTab({ districts }: RefData) {
               <TableCell>{x.contract ?? "—"}{x.contract_type && <Typography variant="caption" display="block" color="text.secondary">
                 {t(`ct_${x.contract_type}` as MessageKey)}</Typography>}</TableCell>
               <TableCell align="right">{x.price != null && x.contract_type !== "monthly" ? fmtMoney(x.price) : "—"}</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 600 }}>{x.contract_type === "monthly"
+              <TableCell align="right" sx={{ fontWeight: 600 }}>{x.pending
+                ? <Chip size="small" label={t("of_pending")} sx={{ bgcolor: STAGE.yellow.bg, color: STAGE.yellow.ink, height: 20 }} />
+                : x.contract_type === "monthly"
                 ? <Typography variant="caption" color="text.secondary">{t("inv_subscriber")}</Typography> : fmtMoney(x.amount)}</TableCell>
             </TableRow>)}
           </TableBody>
@@ -142,6 +151,7 @@ export function InvoicesTab({ districts }: RefData) {
       if (ask === "generate") {
         const r = await accountingApi.generateInvoices(asDate(month));
         toast(t("inv_generated", { c: r.created, u: r.updated, s: r.skipped_sent }), "success");
+        if (r.pending_forms) toast(t("inv_pending_warn", { n: r.pending_forms }), "warning");
       } else {
         const r = await accountingApi.sendInvoices(asDate(month));
         toast(t("inv_sent_done", { n: r.sent, p: r.no_phone }), r.no_phone ? "warning" : "success");

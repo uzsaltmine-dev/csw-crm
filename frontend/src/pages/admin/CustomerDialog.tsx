@@ -8,6 +8,7 @@ import { toast } from "@/lib/alerts";
 import { useCan } from "@/hooks/useCan";
 import type { ContractType, CustomerDetail, District } from "@/types";
 import { LocationChip, MissingChips } from "./CustomersTab";
+import { StatusChip } from "./ContractWizard";
 
 const CONTRACT_TYPES: ContractType[] = ["per_trip", "by_volume", "monthly", "one_off"];
 type Card = { name: string; district_id: number | ""; stir: string; director: string; phone: string; address: string; activity_type: string };
@@ -108,9 +109,10 @@ export function CustomerDialog({ id, districts, onClose, onChanged }: Props) {
                 <TableHead><TableRow><TableCell>{t("contract_no")}</TableCell><TableCell>{t("contract_type")}</TableCell><TableCell>{t("valid_from")}</TableCell>
                   <TableCell>{t("valid_to")}</TableCell><TableCell>{t("price")}</TableCell><TableCell>{t("status")}</TableCell></TableRow></TableHead>
                 <TableBody>{cust.contracts.map((c) => <TableRow key={c.id}>
-                  <TableCell sx={{ fontFamily: "monospace" }}>{c.number}</TableCell><TableCell>{t(`ct_${c.type}`)}</TableCell>
+                  <TableCell sx={{ fontFamily: "monospace" }}>{c.display_number ?? c.number}</TableCell><TableCell>{t(`ct_${c.type}`)}</TableCell>
                   <TableCell>{c.valid_from}</TableCell><TableCell>{c.valid_to}</TableCell><TableCell>{c.price ?? "—"}</TableCell>
-                  <TableCell><Chip size="small" color={inForce(c) ? "success" : "default"} label={t(inForce(c) ? "in_force" : "expired")} /></TableCell>
+                  <TableCell>{c.status && c.status !== "approved" ? <StatusChip status={c.status} />
+                    : <Chip size="small" color={inForce(c) ? "success" : "default"} label={t(inForce(c) ? "in_force" : "expired")} />}</TableCell>
                 </TableRow>)}</TableBody>
               </Table> : <Typography color="text.secondary">—</Typography>}
               {contract && <Box sx={{ mt: 1.5, display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" } }}>

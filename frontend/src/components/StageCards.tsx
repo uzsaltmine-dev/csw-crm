@@ -10,6 +10,13 @@ import { CopyValue, RedTimer, STAGE, SinceTimer, redColor, hoursSince } from "./
 
 const dt = (s?: string | null) => (s ? formatDateTime(new Date(s + "Z")) : "—");
 
+/** «Yangi shartnoma» — korxona shartnomasi oxirgi 30 kunda imzolangan (GPS va legal kartalarida). */
+export function NewContractPill({ r }: { r: Card }) {
+  const { t } = useI18n();
+  if (!r.customer.new_contract) return null;
+  return <Chip size="small" data-new-contract label={t("ctr_new_pill")} sx={{ bgcolor: "#00A651", color: "#fff", fontWeight: 700, height: 20 }} />;
+}
+
 /** Qizil karta: mashina biriktirilmagan. Rang 72 soat davomida to'qlashadi, keyin qora. */
 export function RedCard({ r, now, children, isNew }: { r: Card; now: number; children?: ReactNode; isNew?: boolean }) {
   const { t } = useI18n();
@@ -24,6 +31,7 @@ export function RedCard({ r, now, children, isNew }: { r: Card; now: number; chi
             <Typography sx={{ fontWeight: 700, fontSize: 17 }}>{r.number} · {r.customer.name}</Typography>
             {isNew && <Chip size="small" label={t("rq_new_badge")} sx={{ bgcolor: "#fff", color: "#b71c1c", fontWeight: 700, height: 20 }} />}
             {h >= 72 && <Chip size="small" label={t("stg_overdue")} sx={{ bgcolor: "#ffeb3b", color: "#000", fontWeight: 700, height: 20 }} />}
+            <NewContractPill r={r} />
           </Stack>
           <Typography variant="body2" sx={{ opacity: 0.9 }}>{r.customer.address} · {t("created")}: {dt(r.created_at)}</Typography>
           <Stack direction="row" spacing={2.5} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
@@ -52,6 +60,7 @@ export function YellowCard({ r, now, children, isNew }: { r: Card; now: number; 
           <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
             <Typography sx={{ fontWeight: 700, fontSize: 17 }}>{r.customer.name}</Typography>
             {isNew && <Chip size="small" label={t("rq_new_badge")} sx={{ bgcolor: c.strong, color: "#fff", height: 20 }} />}
+            <NewContractPill r={r} />
             {r.status === "failed" && <Chip size="small" color="error" label={t("s_failed")} sx={{ height: 20 }} />}
             {f?.locked && <Chip size="small" color="error" label={t("of_locked")} sx={{ height: 20 }} />}
           </Stack>

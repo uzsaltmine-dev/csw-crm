@@ -11,7 +11,7 @@ import type { MessageKey } from "@/i18n/messages";
 import { toast } from "@/lib/alerts";
 import type { RefData } from "./AdminHome";
 import { CompaniesTab } from "./CompaniesTab";
-import { CustomerDialog } from "./CustomerDialog";
+import { ContractWizard } from "./ContractWizard";
 import { CustomersTab } from "./CustomersTab";
 import { ImportDialog } from "./ImportDialog";
 
@@ -51,7 +51,7 @@ export function AdminCompaniesTab(ref: RefData) {
           <Stack direction="row" spacing={1} sx={{ px: 1.5, py: { xs: 1, sm: 0 } }}>
             {can("customers.import") && <Button id="cmp-import" size="large" variant="outlined" startIcon={<UploadIcon />}
               onClick={() => setImporting(true)} sx={{ borderWidth: 2, "&:hover": { borderWidth: 2 } }}>{t("import_excel")}</Button>}
-            {can("customers.create") && <Button id="cmp-new-contract" size="large" variant="contained" disableElevation startIcon={<NoteAddIcon />}
+            {can("customers.contract") && <Button id="cmp-new-contract" size="large" variant="contained" disableElevation startIcon={<NoteAddIcon />}
               onClick={() => setCreating(true)} sx={{ bgcolor: STAGE.green.bg, "&:hover": { bgcolor: STAGE.green.border } }}>{t("new_contract")}</Button>}
           </Stack>
         </Stack>
@@ -85,7 +85,7 @@ export function AdminCompaniesTab(ref: RefData) {
       </>}
 
       {tabSub === "base" && <CustomersTab key={baseKey} {...ref} hideActions />}
-      {creating && <CustomerDialog id="new" districts={ref.districts} onClose={() => setCreating(false)} onChanged={() => setBaseKey((k) => k + 1)} />}
+      {creating && <ContractWizard districts={ref.districts} onClose={() => setCreating(false)} onDone={() => setBaseKey((k) => k + 1)} />}
       {importing && <ImportDialog onClose={() => setImporting(false)} onImported={() => setBaseKey((k) => k + 1)} />}
     </Stack>
   );
