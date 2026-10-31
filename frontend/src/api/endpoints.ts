@@ -1,7 +1,7 @@
 import { api } from "./client";
 import { clearTokens, saveTokens, type Tokens } from "@/lib/session";
 import { closeSocket } from "@/lib/socket";
-import type { InvoiceItem, MonthForm, MonthFormCustomer, ProviderReq, CompanyCompare, CompanyRow, GreenItem, PaymentItem, Access, AdminUser, Appeal, OrderFormBrief, OrderPaper, ScheduleDay, ScheduleRow, Service, VehicleOption, RequestDetail, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
+import type { ContractCheck, ContractDraft, ContractItem, InvoiceItem, MonthForm, MonthFormCustomer, ProviderReq, CompanyCompare, CompanyRow, GreenItem, PaymentItem, Access, AdminUser, Appeal, OrderFormBrief, OrderPaper, ScheduleDay, ScheduleRow, Service, VehicleOption, RequestDetail, RequestItem, RequestSource, Stats, WasteType, AdminVehicle, DistrictRadius, CompleteResult, Coords, ContractType, CustomerDetail, CustomerListItem, District, DriverTask, FailReason, FileKind,
   ImportBatch, ImportResult, LocationStatus, Region, Role, SituationEvent, SituationLevel, User } from "@/types";
 
 export const gpsApi = {
@@ -203,11 +203,11 @@ export const accountingApi = {
       "/accounting/payments/import", fd, { params: { dry_run }, timeout: 120_000 }).then((r) => r.data);
   },
   orderForms: (month: string, district_id?: number, customer_id?: number) => api.get<{ month: string; items: MonthForm[];
-    customers: MonthFormCustomer[]; total: number; count: number }>("/accounting/order-forms", { params: { month, district_id, customer_id } })
+    customers: MonthFormCustomer[]; total: number; count: number; pending: number }>("/accounting/order-forms", { params: { month, district_id, customer_id } })
     .then((r) => r.data),
   invoices: (month: string, district_id?: number) => api.get<{ month: string; items: InvoiceItem[]; total: number; drafts: number; sent: number }>(
     "/accounting/invoices", { params: { month, district_id } }).then((r) => r.data),
-  generateInvoices: (month: string) => api.post<{ created: number; updated: number; skipped_sent: number }>("/accounting/invoices/generate", null,
+  generateInvoices: (month: string) => api.post<{ created: number; updated: number; skipped_sent: number; pending_forms: number }>("/accounting/invoices/generate", null,
     { params: { month }, timeout: 120_000 }).then((r) => r.data),
   sendInvoices: (month: string) => api.post<{ sent: number; no_phone: number; total: number }>("/accounting/invoices/send", null,
     { params: { month }, timeout: 120_000 }).then((r) => r.data),
@@ -217,4 +217,28 @@ export const accountingApi = {
 export const providersApi = {
   list: () => api.get<ProviderReq[]>("/admin/providers").then((r) => r.data),
   save: (id: number, body: Partial<ProviderReq>) => api.put<ProviderReq>(`/admin/providers/${id}`, body).then((r) => r.data),
+};
+
+export const contractsApi = {
+  check: (body: ContractDraft, id?: number) => api.post<ContractCheck>(id ? `/contracts/${id}/check` : "/contracts/check", body).then((r) => r.data),
+  create: (body: ContractDraft) => api.post<ContractItem>("/contracts", body).then((r) => r.data),
+  update: (id: number, body: ContractDraft) => api.put<ContractItem>(`/contracts/${id}`, body).then((r) => r.data),
+  remove: (id: number) => api.delete(`/contracts/${id}`),
+  get: (id: number) => api.get<ContractItem>(`/contracts/${id}`).then((r) => r.data),
+  list: (params: { status?: string; q?: string; district_id?: number; limit?: number }) =>
+    api.get<{ items: ContractItem[]; total: number }>("/contracts", { params }).then((r) => r.data),
+  document: (id: number, format: "pdf" | "docx") =>
+    api.get<Blob>(`/contracts/${id}/document`, { params: { format }, responseType: "blob", timeout: 60_000 }).then((r) => r.data),
+  scan: (id: number) => api.get<Blob>(`/contracts/${id}/scan`, { responseType: "blob" }).then((r) => r.data),
+  sign: (id: number, body: { signed_on: string; sign_method: string; platform?: string; platform_id?: string; file?: File | null }) => {
+    const fd = new FormData();
+    fd.append("signed_on", body.signed_on);
+    fd.append("sign_method", body.sign_method);
+    if (body.platform) fd.append("platform", body.platform);
+    if (body.platform_id) fd.append("platform_id", body.platform_id);
+    if (body.file) fd.append("file", body.file, body.file.name);
+    return api.post<ContractItem>(`/contracts/${id}/sign`, fd, { timeout: 60_000 }).then((r) => r.data);
+  },
+  approve: (id: number) => api.post<ContractItem>(`/contracts/${id}/approve`).then((r) => r.data),
+  returnBack: (id: number, comment: string) => api.post<ContractItem>(`/contracts/${id}/return`, { comment }).then((r) => r.data),
 };

@@ -21,6 +21,7 @@ from app.services import access
 
 TASHKENT = timezone(timedelta(hours=5))
 GREEN = (RequestStatus.done, RequestStatus.suspect)
+PENDING = ("signed", "returned")
 ZERO = Decimal("0")
 
 
@@ -47,6 +48,7 @@ class Green:
     closed_via: str | None
     contract: Contract | None
     amount: Decimal
+    pending: Contract | None = None  # imzolangan, lekin buxgalter hali tasdiqlamagan shartnoma (hisobga kirmaydi)
 
 
 def _months(start: date, end: date):
@@ -69,9 +71,15 @@ class Ledger:
 
     def __init__(self, customers: list[Customer], contracts, greens, volumes, payments, today: date):
         self.customers = {c.id: c for c in customers}
+        # Hisob-kitob faqat buxgalter tasdiqlagan shartnomalar bo'yicha; imzolangan-tasdiqlanmaganlari — «kutilmoqda»
         self.contracts: dict[int, list[Contract]] = defaultdict(list)
+        self.pending: dict[int, list[Contract]] = defaultdict(list)
         for c in contracts:
-            self.contracts[c.customer_id].append(c)
+            if c.status == "approved":
+                self.contracts[c.customer_id].append(c)
+            elif c.status in PENDING:
+                self.pending[c.customer_id].append(c)
+        self.usage: dict[int, Decimal] = defaultdict(lambda: ZERO)  # shartnoma bo'yicha olib ketilgan m³
         self.greens: dict[int, list[Green]] = defaultdict(list)
         self.entries: dict[int, list[Entry]] = defaultdict(list)
         self.today = today
@@ -79,13 +87,18 @@ class Ledger:
             day = local_day(r.finished_at or r.created_at)
             vol, via = volumes.get(r.id, (ZERO, None))
             ct = contract_for(self.contracts[r.customer_id], r, day)
+            pend = None if ct else contract_for(self.pending[r.customer_id], r, day) if self.pending[r.customer_id] else None
+            if pend and not (pend.valid_from <= day <= pend.valid_to) and r.contract_id != pend.id:
+                pend = None
             amount = ZERO
             if ct and ct.price is not None:
                 if ct.type == ContractType.per_trip:
                     amount = money(ct.price)
                 elif ct.type == ContractType.by_volume:
                     amount = money(Decimal(str(ct.price)) * vol)
-            self.greens[r.customer_id].append(Green(r, day, vol, via, ct, amount))
+            self.greens[r.customer_id].append(Green(r, day, vol, via, ct, amount, pend))
+            if ct or pend:
+                self.usage[(ct or pend).id] += vol
             if amount:
                 self.entries[r.customer_id].append(Entry(day, amount, "charge"))
         for cid, cts in self.contracts.items():
@@ -151,7 +164,7 @@ async def scoped_customers(db: AsyncSession, actor: User, only_contracted: bool 
     if customer_id is not None:
         q = q.where(Customer.id == customer_id)
     if only_contracted:
-        q = q.where(Customer.id.in_(select(Contract.customer_id)))
+        q = q.where(Customer.id.in_(select(Contract.customer_id).where(Contract.status != "draft")))
     return list((await db.execute(q.order_by(Customer.name))).scalars())
 
 
@@ -259,7 +272,7 @@ def month_lines(led: Ledger, cid: int, month: date) -> list[dict]:
     start, end = month_bounds(month)
     lines = []
     for g in sorted(led.greens[cid], key=lambda g: (g.day, g.request.id)):
-        if not (start <= g.day <= end):
+        if not (start <= g.day <= end) or g.pending:  # tasdiqlanmagan shartnoma — fakturaga tasdiqdan keyin kiradi
             continue
         ct = g.contract
         form_no = g.request.order_form.number if getattr(g.request, "order_form", None) else None
@@ -278,10 +291,10 @@ def month_lines(led: Ledger, cid: int, month: date) -> list[dict]:
             continue
         if ct.type == ContractType.monthly and ct.valid_from <= end and ct.valid_to >= start and start <= led.today:
             day = max(start, ct.valid_from)
-            lines.append({"kind": "monthly", "request_id": None, "day": day, "description": f"Abonent to'lovi, shartnoma {ct.number}, "
+            lines.append({"kind": "monthly", "request_id": None, "day": day, "description": f"Abonent to'lovi, shartnoma {ct.display_number}, "
                           f"{start.strftime('%m.%Y')}", "qty": Decimal(1), "unit": "oy", "price": money(ct.price), "amount": money(ct.price)})
         elif ct.type == ContractType.one_off and start <= ct.valid_from <= end:
-            lines.append({"kind": "one_off", "request_id": None, "day": ct.valid_from, "description": f"Bir martalik xizmat, shartnoma {ct.number}",
+            lines.append({"kind": "one_off", "request_id": None, "day": ct.valid_from, "description": f"Bir martalik xizmat, shartnoma {ct.display_number}",
                           "qty": Decimal(1), "unit": "xizmat", "price": money(ct.price), "amount": money(ct.price)})
     lines.sort(key=lambda x: (x["kind"] == "annex", x["day"]))
     return lines
@@ -297,19 +310,34 @@ async def month_forms(db: AsyncSession, actor: User, month: date, district_id: i
         for g in led.greens[c.id]:
             if not (start <= g.day <= end):
                 continue
-            ct = g.contract
+            ct = g.contract or g.pending
             items.append({"request_id": g.request.id, "number": g.request.number, "day": g.day, "customer_id": c.id, "customer_name": c.name,
                           "code": c.code, "district_id": c.district_id,
                           "form_number": g.request.order_form.number if getattr(g.request, "order_form", None) else None,
                           "volume_m3": float(g.volume), "waste_kind": g.request.order_form.waste_kind if getattr(g.request, "order_form", None) else None,
                           "plate": g.request.vehicle.plate if g.request.vehicle else None, "closed_via": g.closed_via,
-                          "contract": ct.number if ct else None, "contract_type": ct.type.value if ct else None,
-                          "price": float(ct.price) if ct and ct.price is not None else None, "amount": float(g.amount)})
+                          "contract": ct.display_number if ct else None, "contract_type": ct.type.value if ct else None,
+                          "price": float(ct.price) if ct and ct.price is not None else None, "amount": float(g.amount),
+                          "pending": g.pending is not None})
         lines = month_lines(led, c.id, month)
         total = sum((x["amount"] for x in lines), ZERO)
-        if lines:
+        pend = sum(1 for g in led.greens[c.id] if g.pending and start <= g.day <= end)
+        if lines or pend:
             per[c.id] = {"customer_id": c.id, "name": c.name, "code": c.code, "district_id": c.district_id,
-                         "forms": sum(1 for x in lines if x["kind"] in ("form", "annex")), "total": float(total)}
+                         "forms": sum(1 for x in lines if x["kind"] in ("form", "annex")), "total": float(total), "pending": pend,
+                         "usage": usage(led, c.id, end)}
     items.sort(key=lambda x: (x["day"], x["request_id"]), reverse=True)
     return {"month": start, "items": items, "customers": sorted(per.values(), key=lambda x: x["name"]),
-            "total": sum(x["total"] for x in per.values()), "count": len(items)}
+            "total": sum(x["total"] for x in per.values()), "count": len(items), "pending": sum(1 for x in items if x["pending"])}
+
+
+def usage(led: Ledger, cid: int, day: date) -> dict | None:
+    """Yillik hajmdan foydalanish: shu kunda amaldagi shartnoma (tasdiqlangan yoki kutilayotgan) bo'yicha; 90% / 100% — ogohlantirish."""
+    cts = [c for c in led.contracts[cid] + led.pending[cid] if c.valid_from <= day <= c.valid_to and c.annual_volume]
+    if not cts:
+        return None
+    ct = max(cts, key=lambda c: c.valid_from)
+    used, annual = led.usage[ct.id], Decimal(str(ct.annual_volume))
+    pct = float(used / annual * 100) if annual else 0.0
+    return {"contract": ct.display_number, "annual": float(annual), "used": float(used), "pct": round(pct, 1),
+            "level": "over" if pct >= 100 else "warn" if pct >= 90 else "ok"}

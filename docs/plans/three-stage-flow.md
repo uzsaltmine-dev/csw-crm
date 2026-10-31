@@ -57,3 +57,11 @@ Foydalanuvchi bilan 2026-10-30 da grill-me savollari orqali kelishildi. PR #12 d
 - Oyiga bir marta har korxonaga bitta schyot-faktura; narx QQS bilan; oylik shartnomada bitta qator + varaqalar ilova.
 - Jo'natish: SMS + PDF havola. E-faktura (Didox/Soliq) — keyin.
 - Keyingi: «Yangi shartnoma» to'liq jarayoni (forma → tekshirish → qog'oz → buxgalteriya tasdig'i → yashil ro'yxat + GPS pilli).
+
+## PR #17 qarorlari (2026-10-31)
+- Shablon namunalari: Surxondaryo — Didox shartnomasi, Andijon — hujjat.uz «Ommaviy shartnoma». Viloyat bo'yicha avtomatik tanlanadi.
+- Imzo: elektron ham, qog'oz ham. Raqam: ichki avtomatik + platforma ID (imzolangach).
+- Imzolangandan keyin darrov faol (murojaat ochiladi); buxgalter rad etsa — izoh bilan legalga qaytadi.
+- Hisob-kitob faqat buxgalter tasdig'idan keyin.
+- Shartnomada yillik hajm va summa jadvali (QQS 12% ichida, summa so'z bilan).
+- Keyingi: «Qo'shimcha kelishuv» (hajm/tarif o'zgarishi), Didox / hujjat.uz / my.soliq integratsiyasi.

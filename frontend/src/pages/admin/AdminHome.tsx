@@ -11,7 +11,8 @@ import { OrdersTab } from "./OrdersTab";
 import { AdminCompaniesTab } from "./AdminCompaniesTab";
 import { CompaniesTab } from "./CompaniesTab";
 import { PaymentsTab } from "./PaymentsTab";
-import { CustomerDialog } from "./CustomerDialog";
+import { ContractWizard } from "./ContractWizard";
+import { ContractsTab } from "./ContractsTab";
 import NoteAddIcon from "@mui/icons-material/NoteAdd";
 import { StatsTab } from "./StatsTab";
 import { DistrictsTab } from "./DistrictsTab";
@@ -21,14 +22,14 @@ import { InvoicesTab, OrderFormsTab } from "./InvoicesTab";
 import { UsersTab } from "./UsersTab";
 import { VehiclesTab } from "./VehiclesTab";
 
-const TABS = ["stats", "situation", "appeals", "companies", "orderforms", "invoices", "payments", "customers", "users", "districts", "vehicles", "settings"] as const;
+const TABS = ["stats", "situation", "appeals", "companies", "contracts", "orderforms", "invoices", "payments", "customers", "users", "districts", "vehicles", "settings"] as const;
 type TabId = (typeof TABS)[number];
 
 export interface RefData { regions: Region[]; districts: District[]; reload: () => Promise<void>; canWrite: boolean }
 
 // Yorliq → uni ko'rsatadigan ruxsat ("admin" — faqat admin)
 const TAB_PERM: Record<TabId, string[] | "admin"> = {
-  situation: "admin", stats: ["stats.view"], appeals: ["appeals.view", "orders.view", "requests.view"], customers: ["customers.view"], companies: ["accounting.view"], orderforms: ["accounting.payments"], invoices: ["accounting.payments"], payments: ["accounting.payments"], users: ["staff.view"], districts: "admin",
+  situation: "admin", stats: ["stats.view"], appeals: ["appeals.view", "orders.view", "requests.view"], customers: ["customers.view"], companies: ["accounting.view"], contracts: ["customers.contract", "accounting.payments"], orderforms: ["accounting.payments"], invoices: ["accounting.payments"], payments: ["accounting.payments"], users: ["staff.view"], districts: "admin",
   vehicles: ["vehicles.view"], settings: ["settings.view", "settings.radius_edit"],
 };
 
@@ -79,12 +80,13 @@ export function AdminHome() {
           {t("new_contract")}</Button>}
         </Stack>
       </Paper>
-      {newContract && <CustomerDialog id="new" districts={districts} onClose={() => setNewContract(false)} onChanged={() => undefined} />}
+      {newContract && <ContractWizard districts={districts} onClose={() => setNewContract(false)} />}
       {tab === "situation" && <SituationTab {...ref} />}
       {tab === "stats" && <StatsTab {...ref} />}
       {tab === "appeals" && <OrdersTab {...ref} />}
       {tab === "customers" && <AdminCompaniesTab {...ref} />}
       {tab === "companies" && <CompaniesTab {...ref} />}
+      {tab === "contracts" && <ContractsTab {...ref} />}
       {tab === "orderforms" && <OrderFormsTab {...ref} />}
       {tab === "invoices" && <InvoicesTab {...ref} />}
       {tab === "payments" && <PaymentsTab {...ref} />}

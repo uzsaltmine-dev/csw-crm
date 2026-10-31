@@ -93,6 +93,8 @@ export interface Customer {
   location_status: LocationStatus;
   /** "stir" | "contract" — bo'lsa haydovchi biriktirilmaydi */
   missing_fields: string[];
+  /** oxirgi 30 kunda imzolangan shartnoma — GPS kartasida «Yangi shartnoma» */
+  new_contract?: boolean;
 }
 
 export interface CustomerListItem extends Customer {
@@ -114,9 +116,14 @@ export interface ContractFull {
   valid_from: string;
   valid_to: string;
   is_active: boolean;
+  status?: ContractStatus;
+  platform_id?: string | null;
+  display_number?: string | null;
+  annual_volume?: string | null;
 }
 
 export interface CustomerDetail extends CustomerListItem {
+  legal_address?: string | null; bank?: string | null; mfo?: string | null; account?: string | null; oked?: string | null; cadastre?: string | null;
   contacts: Contact[];
   contracts: ContractFull[];
   created_at: string;
@@ -316,9 +323,27 @@ export interface PaymentItem { id: number; customer_id: number; customer_name: s
 /** Buxgalteriya: oy ichida yashil bo'lgan buyurtma varaqasi (summa — amaldagi shartnoma bo'yicha) */
 export interface MonthForm { request_id: number; number: string; day: string; customer_id: number; customer_name: string; code: string | null;
   district_id: number; form_number: string | null; volume_m3: number; waste_kind: string | null; plate: string | null; closed_via: string | null;
-  contract: string | null; contract_type: ContractType | null; price: number | null; amount: number }
-export interface MonthFormCustomer { customer_id: number; name: string; code: string | null; district_id: number; forms: number; total: number }
+  contract: string | null; contract_type: ContractType | null; price: number | null; amount: number; pending?: boolean }
+export interface MonthFormCustomer { customer_id: number; name: string; code: string | null; district_id: number; forms: number; total: number;
+  pending?: number; usage?: { contract: string; annual: number; used: number; pct: number; level: "ok" | "warn" | "over" } | null }
 export interface InvoiceItem { id: number; number: string; customer_id: number; customer_name: string | null; code: string | null; district_id: number | null;
   period: string; status: "draft" | "sent"; total: number; vat: number; sent_at: string | null; sms_phone: string | null; lines_count: number; forms_count: number }
 export interface ProviderReq { id: number; name: string; code: string; region_id: number; full_name: string | null; inn: string | null; address: string | null;
-  bank: string | null; mfo: string | null; account: string | null; director: string | null; chief_accountant: string | null }
+  bank: string | null; mfo: string | null; account: string | null; director: string | null; chief_accountant: string | null;
+  phone?: string | null; oked?: string | null }
+
+/** «Yangi shartnoma» jarayoni */
+export type ContractStatus = "draft" | "signed" | "returned" | "approved";
+export interface Requisites { name: string; stir: string | null; director: string | null; phone: string | null; legal_address: string | null;
+  address: string | null; bank: string | null; mfo: string | null; account: string | null; oked: string | null; cadastre: string | null }
+export interface ContractDraft { customer_id: number; requisites: Requisites; type: ContractType; price: number | null; annual_volume: number | null;
+  annual_trips: number | null; valid_from: string; valid_to: string; place: string; sign_method: "electronic" | "paper" }
+export interface ContractCheck { ok: boolean; errors: { field: string; code: string }[];
+  totals: { qty: number; unit: string; net: number; vat: number; total: number; words: string } }
+export interface ContractEventItem { action: string; comment: string | null; at: string; actor: string | null }
+export interface ContractItem { id: number; number: string; platform: string | null; platform_id: string | null; display_number: string;
+  status: ContractStatus; type: ContractType; price: number | null; annual_volume: number | null; annual_trips: number | null;
+  valid_from: string; valid_to: string; signed_on: string | null; place: string | null; sign_method: "electronic" | "paper" | null;
+  has_scan: boolean; return_comment: string | null; signed_at: string | null; approved_at: string | null; created_at: string;
+  total: number; vat: number; is_active: boolean; used_m3?: number; usage_pct?: number; usage_level?: "ok" | "warn" | "over";
+  customer: Requisites & { id: number; code: string | null; district_id: number } | null; events?: ContractEventItem[] }
