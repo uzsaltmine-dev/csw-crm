@@ -48,3 +48,12 @@ Foydalanuvchi bilan 2026-10-30 da grill-me savollari orqali kelishildi. PR #12 d
 - «Ariza» → «murojaat», raqamlar `M-`. Admin/manager uchun yagona «Murojaatlar» ro'yxati (4 rang, 12/72/144 soat panellari).
 - Operator yangi korxonasi: telefon, STIR, kutib oluvchi → darhol maxsus raqam + SMS (Eskiz.uz); legal navbatiga.
 - Debitor/kreditor hozircha tizim ichida (narx × kub, qo'lda to'lovlar) — buxgalteriya tizimi API'si tayyor bo'lgach o'tkaziladi (PR #14).
+
+## PR #16 qarorlari (2026-10-31)
+- Yozishma (chat) butunlay olib tashlandi; keyinchalik boshqa formatda qaytishi mumkin.
+- Admin/manager «Korxonalar › Statistika»: «Tumanlar kesimida» jadvali yo'q (5 panel + tuman tanlovi qoladi). Debitor/kreditor/kub
+  sahifasidan «Orqaga» — kelingan bo'limga (admin/manager: Korxonalar › Statistika; legal/buxgalter: Korxonalar).
+- Buxgalteriyaga har bir yashil buyurtma varaqasi tushadi; summa amaldagi shartnoma bo'yicha (kub yoki reys).
+- Oyiga bir marta har korxonaga bitta schyot-faktura; narx QQS bilan; oylik shartnomada bitta qator + varaqalar ilova.
+- Jo'natish: SMS + PDF havola. E-faktura (Didox/Soliq) — keyin.
+- Keyingi: «Yangi shartnoma» to'liq jarayoni (forma → tekshirish → qog'oz → buxgalteriya tasdig'i → yashil ro'yxat + GPS pilli).

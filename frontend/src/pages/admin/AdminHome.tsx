@@ -17,17 +17,18 @@ import { StatsTab } from "./StatsTab";
 import { DistrictsTab } from "./DistrictsTab";
 import { SettingsTab } from "./SettingsTab";
 import { SituationTab } from "./SituationTab";
+import { InvoicesTab, OrderFormsTab } from "./InvoicesTab";
 import { UsersTab } from "./UsersTab";
 import { VehiclesTab } from "./VehiclesTab";
 
-const TABS = ["stats", "situation", "appeals", "companies", "payments", "customers", "users", "districts", "vehicles", "settings"] as const;
+const TABS = ["stats", "situation", "appeals", "companies", "orderforms", "invoices", "payments", "customers", "users", "districts", "vehicles", "settings"] as const;
 type TabId = (typeof TABS)[number];
 
 export interface RefData { regions: Region[]; districts: District[]; reload: () => Promise<void>; canWrite: boolean }
 
 // Yorliq → uni ko'rsatadigan ruxsat ("admin" — faqat admin)
 const TAB_PERM: Record<TabId, string[] | "admin"> = {
-  situation: "admin", stats: ["stats.view"], appeals: ["appeals.view", "orders.view", "requests.view"], customers: ["customers.view"], companies: ["accounting.view"], payments: ["accounting.payments"], users: ["staff.view"], districts: "admin",
+  situation: "admin", stats: ["stats.view"], appeals: ["appeals.view", "orders.view", "requests.view"], customers: ["customers.view"], companies: ["accounting.view"], orderforms: ["accounting.payments"], invoices: ["accounting.payments"], payments: ["accounting.payments"], users: ["staff.view"], districts: "admin",
   vehicles: ["vehicles.view"], settings: ["settings.view", "settings.radius_edit"],
 };
 
@@ -45,7 +46,9 @@ export function AdminHome() {
   const loc = useLocation();
   const nav = useNavigate();
   const situation = useSituation();
-  const tab: TabId | undefined = tabs.find((x) => loc.hash === `#${x}`) ?? tabs[0];
+  // "#companies" (legal/buxgalter) ↔ "#customers" (admin/manager) — ikkalasi ham «Korxonalar»
+  const hash = loc.hash === "#companies" && !statsOnly ? "#customers" : loc.hash === "#customers" && statsOnly ? "#companies" : loc.hash;
+  const tab: TabId | undefined = tabs.find((x) => hash === `#${x}`) ?? tabs[0];
   const [regions, setRegions] = useState<Region[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
 
@@ -82,6 +85,8 @@ export function AdminHome() {
       {tab === "appeals" && <OrdersTab {...ref} />}
       {tab === "customers" && <AdminCompaniesTab {...ref} />}
       {tab === "companies" && <CompaniesTab {...ref} />}
+      {tab === "orderforms" && <OrderFormsTab {...ref} />}
+      {tab === "invoices" && <InvoicesTab {...ref} />}
       {tab === "payments" && <PaymentsTab {...ref} />}
       {tab === "users" && <UsersTab {...ref} />}
       {tab === "districts" && <DistrictsTab {...ref} />}

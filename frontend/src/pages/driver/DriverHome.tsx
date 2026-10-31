@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Alert, Badge, Box, Button, Stack, Tab, Tabs, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { ChatButton } from "@/components/Chat";
 import { SoundToggle, useAlertSound, useNewItemsSignal, useNow } from "@/components/Stage";
 import { GreenCard, YellowCard } from "@/components/StageCards";
 import { useI18n } from "@/i18n/I18nContext";
@@ -46,7 +45,6 @@ export function DriverHome() {
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               <Button size="large" variant="contained" disableElevation color="inherit" onClick={() => nav(`/driver/requests/${task.id}`)}
                 sx={{ bgcolor: "#5b4300", color: "#fff", "&:hover": { bgcolor: "#3d2d00" } }}>{t("drv_open_act")}</Button>
-              <ChatButton type="request" id={task.id} size="large" />
             </Stack>
           </YellowCard>
         ))}

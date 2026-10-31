@@ -302,38 +302,6 @@ export interface SituationEvent {
   resolved?: boolean;
 }
 
-export type ChatThreadType = "request" | "appeal";
-export interface ChatMessage {
-  id: number;
-  thread_type: ChatThreadType;
-  thread_id: number;
-  author_id: number;
-  author_name: string;
-  author_role: Role | null;
-  kind: "text" | "voice";
-  text: string | null;
-  duration_s: number | null;
-  expired: boolean;
-  has_audio: boolean;
-  created_at: string;
-}
-export interface ChatThread {
-  thread_type: ChatThreadType;
-  thread_id: number;
-  number: string | null;
-  title: string;
-  closed: boolean;
-  can_write: boolean;
-  appeal_id: number | null;
-  has_more: boolean;
-  items: ChatMessage[];
-}
-export interface ChatUnreadThread { thread_type: ChatThreadType; thread_id: number; number: string | null; title: string; district_id: number; count: number; last_id: number }
-export interface ChatUnread { total: number; threads: ChatUnreadThread[] }
-/** Socket "chat:message": xabar + yozishma haqida qisqa ma'lumot */
-export interface ChatEvent extends ChatMessage {
-  thread: { type: ChatThreadType; id: number; number: string | null; title: string; district_id: number; request_id: number | null };
-}
 
 export interface CompanyRow { customer_id: number; name: string; code: string | null; district_id: number; debit: number; credit: number;
   balance: number; volume_m3: number; green_count: number }
@@ -344,3 +312,13 @@ export interface GreenItem { id: number; number: string | null; day: string; vol
   driver_name: string | null; closed_via: "form" | "act" | null; status: string; contract: string | null; amount: number }
 export interface PaymentItem { id: number; customer_id: number; customer_name: string | null; code: string | null; paid_on: string; amount: number;
   doc_no: string | null; note: string | null; source: "manual" | "import"; created_at: string; cancelled: boolean; cancel_reason: string | null }
+
+/** Buxgalteriya: oy ichida yashil bo'lgan buyurtma varaqasi (summa — amaldagi shartnoma bo'yicha) */
+export interface MonthForm { request_id: number; number: string; day: string; customer_id: number; customer_name: string; code: string | null;
+  district_id: number; form_number: string | null; volume_m3: number; waste_kind: string | null; plate: string | null; closed_via: string | null;
+  contract: string | null; contract_type: ContractType | null; price: number | null; amount: number }
+export interface MonthFormCustomer { customer_id: number; name: string; code: string | null; district_id: number; forms: number; total: number }
+export interface InvoiceItem { id: number; number: string; customer_id: number; customer_name: string | null; code: string | null; district_id: number | null;
+  period: string; status: "draft" | "sent"; total: number; vat: number; sent_at: string | null; sms_phone: string | null; lines_count: number; forms_count: number }
+export interface ProviderReq { id: number; name: string; code: string; region_id: number; full_name: string | null; inn: string | null; address: string | null;
+  bank: string | null; mfo: string | null; account: string | null; director: string | null; chief_accountant: string | null }

@@ -126,7 +126,7 @@ async def load(db: AsyncSession, customers: list[Customer]) -> Ledger:
     ids = [c.id for c in customers] or [-1]
     contracts = list((await db.execute(select(Contract).where(Contract.customer_id.in_(ids)).order_by(Contract.valid_from, Contract.id))).scalars())
     greens = list((await db.execute(select(Request).where(Request.customer_id.in_(ids), Request.status.in_(GREEN))
-                                    .options(selectinload(Request.vehicle), selectinload(Request.driver))
+                                    .options(selectinload(Request.vehicle), selectinload(Request.driver), selectinload(Request.order_form))
                                     .order_by(Request.finished_at))).scalars())
     gids = [r.id for r in greens] or [-1]
     volumes: dict[int, tuple[Decimal, str | None]] = {}
@@ -242,3 +242,74 @@ async def new_contracts(db: AsyncSession, actor: User, district_id: int | None =
     return {"today": today, "periods": [{"key": k, "days": d, "since": today - timedelta(days=d - 1), "count": total[k]}
                                         for k, d in NEW_CONTRACT_PERIODS],
             "districts": [{"district_id": d.id, "name": d.name, **per[d.id]} for d in districts]}
+
+
+# --- buxgalteriya: oy bo'yicha varaqalar va schyot-faktura qatorlari ---
+def month_bounds(month: date) -> tuple[date, date]:
+    start = month.replace(day=1)
+    nxt = (start.replace(day=28) + timedelta(days=4)).replace(day=1)
+    return start, nxt - timedelta(days=1)
+
+
+TYPE_LABEL = {ContractType.per_trip: "reys", ContractType.by_volume: "kub", ContractType.monthly: "abonent", ContractType.one_off: "bir martalik"}
+
+
+def month_lines(led: Ledger, cid: int, month: date) -> list[dict]:
+    """Korxonaning oy uchun faktura qatorlari: reys/kub — har varaqa; oylik — bitta qator + varaqalar ilova (summasiz)."""
+    start, end = month_bounds(month)
+    lines = []
+    for g in sorted(led.greens[cid], key=lambda g: (g.day, g.request.id)):
+        if not (start <= g.day <= end):
+            continue
+        ct = g.contract
+        form_no = g.request.order_form.number if getattr(g.request, "order_form", None) else None
+        desc = f"Chiqindi olib ketish: {g.request.number}" + (f", varaqa {form_no}" if form_no else "")
+        if ct and ct.type == ContractType.by_volume:
+            lines.append({"kind": "form", "request_id": g.request.id, "day": g.day, "description": desc, "qty": g.volume, "unit": "m³",
+                          "price": money(ct.price), "amount": g.amount})
+        elif ct and ct.type == ContractType.per_trip:
+            lines.append({"kind": "form", "request_id": g.request.id, "day": g.day, "description": desc + f" ({g.volume} m³)", "qty": Decimal(1),
+                          "unit": "reys", "price": money(ct.price), "amount": g.amount})
+        else:
+            lines.append({"kind": "annex", "request_id": g.request.id, "day": g.day, "description": desc + f" ({g.volume} m³)",
+                          "qty": g.volume, "unit": "m³", "price": ZERO, "amount": ZERO})
+    for ct in led.contracts[cid]:
+        if ct.price is None or not ct.is_active:
+            continue
+        if ct.type == ContractType.monthly and ct.valid_from <= end and ct.valid_to >= start and start <= led.today:
+            day = max(start, ct.valid_from)
+            lines.append({"kind": "monthly", "request_id": None, "day": day, "description": f"Abonent to'lovi, shartnoma {ct.number}, "
+                          f"{start.strftime('%m.%Y')}", "qty": Decimal(1), "unit": "oy", "price": money(ct.price), "amount": money(ct.price)})
+        elif ct.type == ContractType.one_off and start <= ct.valid_from <= end:
+            lines.append({"kind": "one_off", "request_id": None, "day": ct.valid_from, "description": f"Bir martalik xizmat, shartnoma {ct.number}",
+                          "qty": Decimal(1), "unit": "xizmat", "price": money(ct.price), "amount": money(ct.price)})
+    lines.sort(key=lambda x: (x["kind"] == "annex", x["day"]))
+    return lines
+
+
+async def month_forms(db: AsyncSession, actor: User, month: date, district_id: int | None = None, customer_id: int | None = None) -> dict:
+    """Buxgalteriya «Buyurtma varaqalari»: oy ichida yashil bo'lgan barcha varaqalar summasi bilan + korxonalar bo'yicha jami."""
+    custs = await scoped_customers(db, actor, only_contracted=False, customer_id=customer_id, district_id=district_id)
+    led = await load(db, custs)
+    start, end = month_bounds(month)
+    items, per = [], {}
+    for c in custs:
+        for g in led.greens[c.id]:
+            if not (start <= g.day <= end):
+                continue
+            ct = g.contract
+            items.append({"request_id": g.request.id, "number": g.request.number, "day": g.day, "customer_id": c.id, "customer_name": c.name,
+                          "code": c.code, "district_id": c.district_id,
+                          "form_number": g.request.order_form.number if getattr(g.request, "order_form", None) else None,
+                          "volume_m3": float(g.volume), "waste_kind": g.request.order_form.waste_kind if getattr(g.request, "order_form", None) else None,
+                          "plate": g.request.vehicle.plate if g.request.vehicle else None, "closed_via": g.closed_via,
+                          "contract": ct.number if ct else None, "contract_type": ct.type.value if ct else None,
+                          "price": float(ct.price) if ct and ct.price is not None else None, "amount": float(g.amount)})
+        lines = month_lines(led, c.id, month)
+        total = sum((x["amount"] for x in lines), ZERO)
+        if lines:
+            per[c.id] = {"customer_id": c.id, "name": c.name, "code": c.code, "district_id": c.district_id,
+                         "forms": sum(1 for x in lines if x["kind"] in ("form", "annex")), "total": float(total)}
+    items.sort(key=lambda x: (x["day"], x["request_id"]), reverse=True)
+    return {"month": start, "items": items, "customers": sorted(per.values(), key=lambda x: x["name"]),
+            "total": sum(x["total"] for x in per.values()), "count": len(items)}

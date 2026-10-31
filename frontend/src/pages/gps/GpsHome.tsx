@@ -9,7 +9,6 @@ import ExpandIcon from "@mui/icons-material/ExpandMore";
 import PrintIcon from "@mui/icons-material/Print";
 import { gpsApi, requestsApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
-import { ChatButton } from "@/components/Chat";
 import { OrderPaperDialog } from "@/components/OrderPaper";
 import { SoundToggle, useAlertSound, useNewItemsSignal, useNow } from "@/components/Stage";
 import { RedCard, YellowCard } from "@/components/StageCards";
@@ -121,7 +120,6 @@ export function GpsHome() {
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {r.order_form && <Button size="small" variant={r.order_form.printed ? "outlined" : "contained"} color="inherit" disableElevation
                 startIcon={<PrintIcon />} onClick={() => setPaper(r.order_form!.id)}>{t(r.order_form.printed ? "of_open" : "of_print")}</Button>}
-              <ChatButton type="request" id={r.id} />
             </Stack>
           </YellowCard>
         ))}
@@ -176,7 +174,6 @@ function AssignBar({ r, onDone, onError }: { r: DriverTask; onDone: (res: Driver
         {busy ? <CircularProgress size={18} color="inherit" /> : t("gps_assign_vehicle")}
       </Button>
       <Box sx={{ ml: { sm: "auto" }, "& .MuiButton-root": { color: "#fff", borderColor: "rgba(255,255,255,.6)" } }}>
-        <ChatButton type="request" id={r.id} />
       </Box>
       <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)} PaperProps={{ sx: { width: 380, maxHeight: 440 } }}>
         <Stack direction="row" alignItems="center" sx={{ px: 2, py: 1 }}>

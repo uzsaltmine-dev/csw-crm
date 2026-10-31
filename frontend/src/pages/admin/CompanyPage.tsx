@@ -3,7 +3,7 @@ import { Alert, Box, Button, Chip, CircularProgress, MenuItem, Paper, Stack, Tab
   TableRow, Tabs, TextField, Typography } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { accountingApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
 import { useI18n } from "@/i18n/I18nContext";
@@ -64,6 +64,9 @@ function Diff({ a, b, good }: { a: number; b: number; good: "up" | "down" }) {
 export function CompanyPage() {
   const { t, tErr } = useI18n();
   const nav = useNavigate();
+  const loc = useLocation();
+  // Ortga — qaysi bo'limdan kelingan bo'lsa o'sha (yo'q bo'lsa rol bo'yicha Korxonalar)
+  const back = (loc.state as { from?: string } | null)?.from ?? "/admin#companies";
   const { id, view: v } = useParams();
   const cid = Number(id);
   const view: View = v === "credit" || v === "volume" ? v : "debit";
@@ -86,14 +89,14 @@ export function CompanyPage() {
   return (
     <Stack spacing={2} id="company-page">
       <Stack direction="row" spacing={1} alignItems="center">
-        <Button startIcon={<ArrowBackIcon />} onClick={() => nav("/admin#companies")}>{t("back")}</Button>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => nav(back)}>{t("back")}</Button>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h5" noWrap>{cust?.name ?? "…"}</Typography>
           <Typography color="text.secondary"><b style={{ fontFamily: "ui-monospace, monospace" }}>{cust?.code}</b>{cust?.stir && ` · STIR ${cust.stir}`}</Typography>
         </Box>
       </Stack>
       <Paper variant="outlined">
-        <Tabs value={view} onChange={(_, x) => nav(`/admin/korxona/${cid}/${x}`, { replace: true })}>
+        <Tabs value={view} onChange={(_, x) => nav(`/admin/korxona/${cid}/${x}`, { replace: true, state: loc.state })}>
           <Tab value="debit" id="cp-tab-debit" label={t("cmp_debit")} />
           <Tab value="credit" id="cp-tab-credit" label={t("cmp_credit")} />
           <Tab value="volume" id="cp-tab-volume" label={t("cmp_volume")} />

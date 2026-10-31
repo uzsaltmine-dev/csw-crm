@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Button, ButtonBase, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tabs,
-  TextField, Typography } from "@mui/material";
+import { Box, Button, ButtonBase, MenuItem, Paper, Stack, Tab, Tabs, TextField, Typography } from "@mui/material";
 import NoteAddIcon from "@mui/icons-material/NoteAdd";
 import UploadIcon from "@mui/icons-material/UploadFile";
 import { accountingApi, type NewPeriod } from "@/api/endpoints";
@@ -20,7 +19,7 @@ const PERIODS: NewPeriod[] = ["d7", "d15", "m1", "m6", "y1"];
 type NC = Awaited<ReturnType<typeof accountingApi.newContracts>>;
 
 /**
- * Admin/manager «Korxonalar»: «Statistika» (yangi shartnomalar 7/15/30/182/365 kun, tumanlar kesimi, debitor/kreditor jadvali —
+ * Admin/manager «Korxonalar»: «Statistika» (yangi shartnomalar 7/15/30/182/365 kun, debitor/kreditor jadvali —
  * tuman filtri hammasiga) va «Korxonalar bazasi». «Yangi shartnoma» va «Fayldan import» — ichki tablar qatorining o'ng chetida.
  */
 export function AdminCompaniesTab(ref: RefData) {
@@ -82,32 +81,7 @@ export function AdminCompaniesTab(ref: RefData) {
             );
           })}
         </Box>
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>{t("nc_by_district")}</Typography>
-          <TableContainer>
-            <Table size="small" id="nc-table">
-              <TableHead><TableRow>
-                <TableCell>{t("district")}</TableCell>
-                {PERIODS.map((p) => <TableCell key={p} align="right" sx={{ fontWeight: period === p ? 700 : 400,
-                  bgcolor: period === p ? "action.selected" : undefined }}>{t(`nc_${p}` as MessageKey)}</TableCell>)}
-              </TableRow></TableHead>
-              <TableBody>
-                {nc?.districts.map((d) => (
-                  <TableRow key={d.district_id} hover data-district={d.name}>
-                    <TableCell>{d.name}</TableCell>
-                    {PERIODS.map((p) => <TableCell key={p} align="right" sx={{ fontVariantNumeric: "tabular-nums",
-                      fontWeight: period === p ? 700 : 400, bgcolor: period === p ? "action.selected" : undefined }}>{d[p]}</TableCell>)}
-                  </TableRow>
-                ))}
-                {nc && nc.districts.length > 1 && <TableRow sx={{ "& td": { fontWeight: 700 } }}>
-                  <TableCell>{t("st_total")}</TableCell>
-                  {PERIODS.map((p) => <TableCell key={p} align="right">{nc.periods.find((x) => x.key === p)?.count}</TableCell>)}
-                </TableRow>}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-        <CompaniesTab {...ref} districtId={district || undefined} showDistrict />
+        <CompaniesTab {...ref} districtId={district || undefined} showDistrict backTo="/admin#customers" />
       </>}
 
       {tabSub === "base" && <CustomersTab key={baseKey} {...ref} hideActions />}

@@ -11,7 +11,6 @@ import { SignaturePad } from "@/components/SignaturePad";
 import { distanceM, useGeolocation } from "@/hooks/useGeolocation";
 import { useOnline } from "@/hooks/useOnline";
 import { useI18n } from "@/i18n/I18nContext";
-import { ChatButton } from "@/components/Chat";
 import type { MessageKey } from "@/i18n/messages";
 import { chooseDialog, toast } from "@/lib/alerts";
 import { formatDateTime } from "@/lib/format";
@@ -137,8 +136,7 @@ export function ActPage() {
         <Typography color="text.secondary">{t("address")}: {task.customer.address}</Typography>
         <Typography color="text.secondary">{t("phone")}: {task.customer.phone}</Typography>
         <Typography sx={{ fontFamily: "monospace", mt: 1 }}>{t("naryad")}: {task.naryad_no}</Typography>
-        <Box sx={{ mt: 1.5 }}><ChatButton type="request" id={task.id} size="large" /></Box>
-        {!started && <Button sx={{ mt: 2 }} variant="contained" size="large" onClick={goEnroute} disabled={busy || !online}>{t("go")}</Button>}
+                {!started && <Button sx={{ mt: 2 }} variant="contained" size="large" onClick={goEnroute} disabled={busy || !online}>{t("go")}</Button>}
       </Paper>
 
       {started && <>

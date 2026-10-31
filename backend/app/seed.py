@@ -13,7 +13,7 @@ from app.core.permissions import apply_template
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.services.schedule import today as schedule_today
-from app.models import AppSetting, Contract, Customer, District, Provider, Region, ChatMessage, OrderForm, Payment, Request, RequestEvent, User, VehiclePosition, WorkSchedule, UserDistrict, Vehicle
+from app.models import AppSetting, Contract, Customer, District, Provider, Region, OrderForm, Payment, Request, RequestEvent, User, VehiclePosition, WorkSchedule, UserDistrict, Vehicle
 from app.db.base import utcnow
 from app.models.enums import ContractType, LocationStatus, RequestStatus, Role, WasteType
 
@@ -47,13 +47,16 @@ async def seed() -> None:
         apply_template(legal)
         db.add_all([manager, legal])
         district_ids: list[int] = []
-        chat_demo: tuple[int, User] | None = None
         n = 0
         for region_name, (prov_name, code, plate_code, districts) in REGIONS.items():
             region = Region(name=region_name)
             db.add(region)
             await db.flush()
-            db.add(Provider(name=prov_name, code=code, region_id=region.id))
+            # DEMO rekvizitlar (haqiqiy emas) — admin «Sozlamalar»da almashtiriladi
+            k = len(district_ids) + 1
+            db.add(Provider(name=prov_name, code=code, region_id=region.id, full_name=f'"{prov_name}" MChJ (demo)',
+                            inn=f"30{k:07d}", address=f"{region_name}, demo ko'chasi, {k}-uy", bank="DEMO bank AT",
+                            mfo="00000", account=f"2020800000000000{k:04d}", director="Demo Direktor", chief_accountant="Demo Bosh buxgalter"))
             for d_name, lat, lng in districts:
                 n += 1
                 d = District(name=d_name, region_id=region.id)
@@ -101,8 +104,6 @@ async def seed() -> None:
                     await db.flush()
                     r.number = f"M-{r.id:06d}"
                     db.add(RequestEvent(request_id=r.id, status=RequestStatus.new, created_at=now, note="namunaviy ariza"))
-                    if d_name == "Asaka tumani" and k == 0:
-                        chat_demo = (r.id, gps)
                 # Statistika uchun tarix: 6 kun oldin bajarilgan va 4 kun oldin ochilib muddati o'tgan ariza
                 for days, status in ((75, RequestStatus.done), (40, RequestStatus.done), (6, RequestStatus.done), (4, RequestStatus.new)):
                     created = now - timedelta(days=days)
@@ -149,13 +150,6 @@ async def seed() -> None:
         db.add(operator)
         await db.flush()
         db.add_all([UserDistrict(user_id=u.id, district_id=d) for u in (manager, legal, operator, accountant) for d in district_ids])
-        # Yozishma namunasi: Asakadagi birinchi arizada operator va GPS xodimi (gps4)
-        if chat_demo:
-            rid, gps_user = chat_demo
-            for author, text in ((operator, "Mijoz so'radi: mashina soat 14:00 dan keyin kelsin, darvoza orqa tomonda."),
-                                 (gps_user, "Tushunarli, haydovchiga yetkazaman."),
-                                 (operator, "Rahmat! Mas'ul shaxs telefoni: +998 91 111-11-11")):
-                db.add(ChatMessage(thread_type="request", thread_id=rid, author_id=author.id, kind="text", text=text))
         await db.commit()
         print("Seed tayyor: admin, manager, legal, operator, buxgalter, gps1..gps12, driver11..driver122")
 

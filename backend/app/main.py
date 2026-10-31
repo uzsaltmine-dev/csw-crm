@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.v1 import accounting, admin, auth, callcenter, chat, customers, driver, gps, integrations, orders, situation
+from app.api.v1 import accounting, admin, auth, callcenter, customers, driver, gps, integrations, orders, situation
 from app.core.config import get_settings
 from app.core.errors import AppError, app_error_handler
 from app.middleware import CsrfHeaderMiddleware, RequestContextMiddleware
@@ -21,9 +21,8 @@ log = logging.getLogger("csw")
 
 
 async def _purge_situation_daily(storage) -> None:
-    """Sutkada bir marta: Vaziyat jurnalidan va yozishmadagi ovozli xabarlardan 90 kundan eskilarini o'chiradi."""
+    """Sutkada bir marta: Vaziyat jurnalidan 90 kundan eski hodisalarni o'chiradi."""
     from app.db.session import SessionLocal
-    from app.services.chat import purge_voice
     from app.services.situation import purge_old
     while True:
         try:
@@ -33,13 +32,6 @@ async def _purge_situation_daily(storage) -> None:
                 log.info("situation: %s ta eski hodisa o'chirildi", n)
         except Exception:  # noqa: BLE001 — tozalash xatosi ilovani to'xtatmasin
             log.exception("situation purge failed")
-        try:
-            async with SessionLocal() as db:
-                n = await purge_voice(db, storage)
-            if n:
-                log.info("chat: %s ta eski ovozli xabar audiosi o'chirildi", n)
-        except Exception:  # noqa: BLE001
-            log.exception("chat voice purge failed")
         await asyncio.sleep(24 * 3600)
 
 
@@ -76,8 +68,8 @@ def create_app(storage=None) -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     app.add_middleware(CORSMiddleware, allow_origins=s.cors_list, allow_credentials=True,
                        allow_methods=["*"], allow_headers=["*"], expose_headers=["X-Request-ID"])
-    for r in (auth.router, driver.router, gps.router, admin.router, customers.router, situation.router, callcenter.router, chat.router,
-              orders.router, integrations.router, accounting.router):
+    for r in (auth.router, driver.router, gps.router, admin.router, customers.router, situation.router, callcenter.router,
+              orders.router, integrations.router, accounting.router, accounting.public_router):
         app.include_router(r, prefix="/api/v1")
 
     @app.get("/api/health", tags=["system"])

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { Box, Button, MenuItem, Paper, Select, Slider, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
-import { adminApi } from "@/api/endpoints";
+import { Box, Button, MenuItem, Paper, Select, Slider, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
+import { adminApi, providersApi } from "@/api/endpoints";
 import { errorCode, errorMessage } from "@/api/client";
 import { useCan } from "@/hooks/useCan";
 import { useI18n } from "@/i18n/I18nContext";
 import { toast } from "@/lib/alerts";
 import { useAppSelector } from "@/store";
-import type { DistrictRadius } from "@/types";
+import type { DistrictRadius, ProviderReq } from "@/types";
+import type { MessageKey } from "@/i18n/messages";
 import type { RefData } from "./AdminHome";
 
 const MARKS = [100, 150, 200, 250, 300].map((v) => ({ value: v, label: `${v} m` }));
@@ -71,6 +72,55 @@ export function SettingsTab(_: RefData) {
           </TableBody>
         </Table>
       </Paper>
+      <Requisites isAdmin={isAdmin} />
     </Stack>
+  );
+}
+
+const REQ_FIELDS: { k: keyof ProviderReq; w: number; pattern?: RegExp }[] = [
+  { k: "full_name", w: 2 }, { k: "inn", w: 1, pattern: /^\d{9}$/ }, { k: "address", w: 3 }, { k: "bank", w: 2 }, { k: "mfo", w: 1, pattern: /^\d{5}$/ },
+  { k: "account", w: 2, pattern: /^\d{20}$/ }, { k: "director", w: 2 }, { k: "chief_accountant", w: 2 },
+];
+
+/** Xizmat ko'rsatuvchi (viloyat bo'yicha) rekvizitlari — schyot-faktura PDF'iga chiqadi. Tahrirlash — faqat admin. */
+function Requisites({ isAdmin }: { isAdmin: boolean }) {
+  const { t, tErr } = useI18n();
+  const [list, setList] = useState<ProviderReq[]>([]);
+  const [busy, setBusy] = useState<number | null>(null);
+  useEffect(() => { providersApi.list().then(setList).catch(() => undefined); }, []);
+  const set = (id: number, k: keyof ProviderReq, v: string) => setList((l) => l.map((p) => (p.id === id ? { ...p, [k]: v } : p)));
+  const save = async (p: ProviderReq) => {
+    const bad = REQ_FIELDS.find((f) => f.pattern && p[f.k] && !f.pattern.test(String(p[f.k])));
+    if (bad) { toast(t("req_invalid", { f: t(`req_${bad.k}` as MessageKey) }), "error"); return; }
+    setBusy(p.id);
+    try {
+      const body = Object.fromEntries(REQ_FIELDS.map((f) => [f.k, (p[f.k] as string | null) || null]));
+      const r = await providersApi.save(p.id, body);
+      setList((l) => l.map((x) => (x.id === r.id ? r : x)));
+      toast(t("saved"));
+    } catch (e) { toast(tErr(errorCode(e), errorMessage(e)), "error"); } finally { setBusy(null); }
+  };
+  if (!list.length) return null;
+  return (
+    <Paper variant="outlined" sx={{ p: 3 }} id="requisites">
+      <Typography variant="subtitle1" fontWeight={600}>{t("req_title")}</Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{t("req_hint")}</Typography>
+      <Stack spacing={3}>
+        {list.map((p) => (
+          <Box key={p.id} data-provider={p.code}>
+            <Typography fontWeight={600} sx={{ mb: 1 }}>{p.name} ({p.code})</Typography>
+            <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}>
+              {REQ_FIELDS.map((f) => (
+                <TextField key={f.k} size="small" label={t(`req_${f.k}` as MessageKey)} value={(p[f.k] as string | null) ?? ""} disabled={!isAdmin}
+                  name={f.k} onChange={(e) => set(p.id, f.k, e.target.value)} sx={{ gridColumn: { md: `span ${f.w}` } }}
+                  error={!!(f.pattern && p[f.k] && !f.pattern.test(String(p[f.k])))} />
+              ))}
+            </Box>
+            {isAdmin && <Button sx={{ mt: 1.5 }} variant="contained" disableElevation disabled={busy === p.id} onClick={() => save(p)}
+              data-save-provider={p.code}>{t("save")}</Button>}
+          </Box>
+        ))}
+      </Stack>
+    </Paper>
   );
 }
